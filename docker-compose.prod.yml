@@ -1,0 +1,19 @@
+# Produktionsumgebung auf dem Server (Port 4200)
+
+services:
+  contracts:
+    image: ghcr.io/${GHCR_USERNAME}/contracts-app:prod
+    container_name: contracts-app-prod
+    restart: unless-stopped
+    ports:
+      - "4200:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - API_KEY=${API_KEY:-}
+    volumes:
+      - contracts-data:/app/data
+
+volumes:
+  contracts-data:
+    name: contracts-app-prod-data

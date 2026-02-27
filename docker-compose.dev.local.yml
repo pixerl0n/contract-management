@@ -1,0 +1,22 @@
+# Lokale Entwicklung (Laptop): baut das Image direkt aus dem Quellcode.
+
+services:
+  contracts:
+    build: .
+    container_name: contracts-app-dev-local
+    image: local/contracts-app:dev
+    ports:
+      - "4210:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - API_KEY=${API_KEY:-}
+    volumes:
+      - contracts-data:/app/data
+      - ./server.js:/app/server.js
+      - ./public:/app/public
+    user: "1000:1000"
+
+volumes:
+  contracts-data:
+    name: contracts-app-dev-local-data

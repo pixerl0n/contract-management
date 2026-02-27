@@ -1,0 +1,41 @@
+[
+    {
+        "version": "1.1.0",
+        "date": "2026-02-27",
+        "type": "minor",
+        "changes": [
+            "Zahlungsintervall: Monatlich, Quartalsweise, Halbjaehrlich, Jaehrlich",
+            "Automatische Berechnung der monatlichen Kosten aus Betrag und Intervall",
+            "Cashback-Feld (Freitext) zur Erfassung von Cashback-Informationen",
+            "Kuendigungswarnung pro Vertrag aktivierbar/deaktivierbar",
+            "Kostenaufteilung: Vertraege mit mehreren Personen teilen",
+            "Dashboard zeigt Gesamtkosten und eigenen Anteil separat an",
+            "Neuer API-Endpoint: GET /api/billing-intervals",
+            "CSV/JSON-Export mit neuen Feldern (Intervall, Cashback, Geteilt, Warnung)",
+            "Abwaertskompatibilitaet beim JSON-Import (monthly_cost wird als cost akzeptiert)",
+            "Security: Content-Security-Policy Header hinzugefuegt",
+            "Security: SRI-Hashes fuer CDN-Scripts (React, ReactDOM, Babel)",
+            "Security: Template-Injection-Schutz bei API-Key/NODE_ENV Injection",
+            "Security: Globaler Error-Handler ohne interne Details",
+            "Security: Validierung von description, notes, status, cost (NaN-Schutz)",
+            "DB-Migration: Bestehende Datenbanken werden automatisch aktualisiert"
+        ]
+    },
+    {
+        "version": "1.0.0",
+        "date": "2026-02-27",
+        "type": "major",
+        "changes": [
+            "Vertragserfassung mit Name, Kategorie, Laufzeit, Kuendigungsfrist, Kosten",
+            "Automatische Berechnung von Kuendigungs- und Enddatum",
+            "Multi-User mit Passwort-Authentifizierung und Session-Tokens",
+            "Filter nach Kategorie, Status und Sortierung nach Name, Kosten, Kuendigungsdatum",
+            "Suche nach Vertragsname oder Anbieter",
+            "Kuendigungswarnung: Rot (<30 Tage), Gelb (<90 Tage), Gruen (>90 Tage)",
+            "Kosten-Uebersicht pro Monat und Jahr, aufgeschluesselt nach Kategorie",
+            "CSV- und JSON-Export/Import",
+            "Responsive Design mit Dark/Light Mode",
+            "Docker-Support mit Multi-Environment Setup"
+        ]
+    }
+]

@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Vertragsmanagement</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="icon" id="favicon" href="data:,">
+    <script crossorigin="anonymous" src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z"></script>
+    <script crossorigin="anonymous" src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1"></script>
+    <script crossorigin="anonymous" src="https://unpkg.com/@babel/standalone@7.29.1/babel.min.js" integrity="sha384-Fo0OdKhdnE7y2WmzjOMW4PYjHkkANeu1501pWTqKrzAPeJMFQb4ZTdAA9dtrVUJV"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:            #f5f5f7;
+            --bg-card:       #ffffff;
+            --bg-elevated:   #f0f0f2;
+            --text:          #1d1d1f;
+            --text-2:        #6e6e73;
+            --text-3:        #aeaeb2;
+            --accent:        #007aff;
+            --accent-h:      #0056cc;
+            --danger:        #ff3b30;
+            --success:       #34c759;
+            --warning:       #ff9f0a;
+            --border:        rgba(0,0,0,0.07);
+            --shadow-sm:     0 2px 8px rgba(0,0,0,0.05);
+            --shadow-md:     0 4px 20px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-lg:     0 12px 40px rgba(0,0,0,0.09), 0 4px 12px rgba(0,0,0,0.05);
+            --r-sm: 10px; --r-md: 14px; --r-lg: 20px;
+            --nav-bg:        rgba(245,245,247,.85);
+            --ghost-hover:   rgba(0,0,0,.05);
+            --accent-soft:   rgba(0,122,255,.06);
+            --danger-bg:     rgba(255,59,48,.08);
+            --danger-border: rgba(255,59,48,.15);
+            --danger-hover:  rgba(255,59,48,.14);
+            --accent-badge:  rgba(0,122,255,.12);
+            --accent-glow:   rgba(0,122,255,.3);
+            --toast-bg:      #1c1c1e;
+        }
+
+        [data-theme="dark"] {
+            --bg:            #212126;
+            --bg-card:       #2c2c34;
+            --bg-elevated:   #3a3a42;
+            --text:          #f0f0f5;
+            --text-2:        #c5c5cc;
+            --text-3:        #8e8e99;
+            --accent:        #3a9eff;
+            --accent-h:      #6ab6ff;
+            --danger:        #ff6961;
+            --success:       #4ade80;
+            --warning:       #ffb84d;
+            --border:        rgba(255,255,255,0.14);
+            --shadow-sm:     0 2px 8px rgba(0,0,0,0.3);
+            --shadow-md:     0 4px 20px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.2);
+            --shadow-lg:     0 12px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+            --nav-bg:        rgba(33,33,38,.88);
+            --ghost-hover:   rgba(255,255,255,.1);
+            --accent-soft:   rgba(58,158,255,.15);
+            --danger-bg:     rgba(255,105,97,.15);
+            --danger-border: rgba(255,105,97,.25);
+            --danger-hover:  rgba(255,105,97,.25);
+            --accent-badge:  rgba(58,158,255,.22);
+            --accent-glow:   rgba(58,158,255,.4);
+            --toast-bg:      #f0f0f5;
+        }
+
+        @media (hover: hover) and (min-width: 768px) {
+            [data-theme="dark"] {
+                --bg:            #28282e;
+                --bg-card:       #343440;
+                --bg-elevated:   #42424c;
+                --text-3:        #9a9aa6;
+                --border:        rgba(255,255,255,0.16);
+                --nav-bg:        rgba(40,40,46,.9);
+            }
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        /* -- Layout -- */
+        .max-w { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+        .page  { min-height: 100dvh; padding: 16px 0 32px; }
+
+        /* -- Cards -- */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--r-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+        }
+        .card-body { padding: 20px; }
+
+        /* -- Inputs -- */
+        input[type="text"], input[type="password"], input[type="number"], input[type="date"], textarea, select {
+            font-family: inherit; font-size: 15px; color: var(--text);
+            background: var(--bg-elevated); border: 1.5px solid var(--border);
+            border-radius: var(--r-sm); padding: 12px 14px; width: 100%;
+            transition: border-color .18s, box-shadow .18s; resize: none;
+            -webkit-appearance: none; appearance: none;
+        }
+        input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus,
+        input[type="date"]:focus, textarea:focus, select:focus {
+            outline: none; border-color: var(--accent); background: var(--bg-card);
+            box-shadow: 0 0 0 3px var(--accent-badge);
+        }
+        input::placeholder, textarea::placeholder { color: var(--text-3); }
+
+        /* -- Password field with toggle -- */
+        .pw-field { position: relative; }
+        .pw-field input { padding-right: 44px; }
+        .pw-toggle {
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: var(--text-3); padding: 6px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .pw-toggle:hover { color: var(--text-2); }
+        .pw-toggle:active { transform: translateY(-50%) scale(0.95); }
+
+        /* -- Buttons -- */
+        button { font-family: inherit; color: inherit; cursor: pointer; border: none; background: none;
+                 transition: all .18s cubic-bezier(.25,.1,.25,1); }
+        button:active { transform: scale(0.97); }
+
+        .btn { display: inline-flex; align-items: center; justify-content: center;
+               gap: 6px; font-weight: 600; border-radius: var(--r-md); padding: 12px 20px;
+               font-size: 15px; white-space: nowrap; }
+        .btn-primary   { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-h); box-shadow: 0 4px 14px var(--accent-glow); }
+        .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-danger    { background: var(--danger-bg); color: var(--danger); border: 1.5px solid var(--danger-border); }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-ghost     { color: var(--text-2); padding: 8px; border-radius: 50%; }
+        .btn-ghost:hover { background: var(--ghost-hover); }
+        .btn-full      { width: 100%; }
+        .btn-sm        { padding: 8px 14px; font-size: 13px; border-radius: var(--r-sm); }
+
+        /* -- Nav -- */
+        .nav {
+            position: sticky; top: 0; z-index: 50;
+            background: var(--nav-bg);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+        }
+        .nav-inner { max-width: 960px; margin: 0 auto;
+                     display: flex; align-items: center; justify-content: space-between; }
+        .nav-title { font-weight: 700; font-size: 17px; letter-spacing: -.02em; }
+
+        /* -- Badge -- */
+        .env-badge {
+            font-size: 10px; font-weight: 700; letter-spacing: .06em;
+            padding: 3px 8px; border-radius: 6px; text-transform: uppercase;
+        }
+        .badge-development { background: var(--accent-badge); color: var(--accent); }
+        .badge-test        { background: rgba(255,159,10,.12); color: var(--warning); }
+        .badge-production  { background: rgba(52,199,89,.12);  color: var(--success); }
+
+        /* -- Toast -- */
+        .toast-container { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+        .toast {
+            padding: 11px 20px; border-radius: 100px; font-size: 14px; font-weight: 500;
+            box-shadow: var(--shadow-lg); white-space: nowrap;
+            animation: toastIn .25s ease;
+        }
+        .toast-success { background: var(--toast-bg); color: var(--bg); }
+        .toast-error   { background: var(--danger); color: #fff; }
+        @keyframes toastIn { from { opacity:0; transform: translateY(10px); }
+                             to   { opacity:1; transform: translateY(0); } }
+
+        /* -- User list -- */
+        .user-btn {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 15px 16px; border-radius: var(--r-md);
+            border: 1.5px solid var(--border); background: var(--bg-card);
+            font-weight: 500; font-size: 15px; text-align: left; width: 100%;
+        }
+        .user-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+        /* -- Modal overlay (bottom sheet) -- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,.35);
+            backdrop-filter: blur(4px); z-index: 150;
+            display: flex; align-items: flex-end; justify-content: center;
+            padding: 0;
+        }
+        .modal {
+            background: var(--bg-card); border-radius: var(--r-lg) var(--r-lg) 0 0;
+            padding: 24px 20px 32px; width: 100%; max-width: 600px;
+            max-height: 90dvh; overflow-y: auto;
+            animation: slideUp .25s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-handle { width: 40px; height: 4px; background: var(--border);
+                        border-radius: 2px; margin: 0 auto 20px; }
+
+        /* -- Changelog -- */
+        .changelog-list { list-style: none; padding: 0; }
+        .changelog-item { font-size: 14px; color: var(--text-2); padding: 4px 0 4px 18px; position: relative; line-height: 1.5; }
+        .changelog-item::before { content: ''; position: absolute; left: 0; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); }
+        .changelog-version-block { padding: 16px 0; border-bottom: 1px solid var(--border); }
+        .changelog-version-block:last-child { border-bottom: none; }
+        .changelog-version-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+        .version-number { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+        .version-date { font-size: 12px; color: var(--text-3); }
+        .version-type { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 100px; text-transform: uppercase; letter-spacing: 0.04em; }
+        .type-major { background: rgba(255,59,48,0.1); color: var(--danger); }
+        .type-minor { background: rgba(0,122,255,0.1); color: var(--accent); }
+        .type-patch { background: rgba(52,199,89,0.1); color: var(--success); }
+
+        /* -- Offline banner -- */
+        .offline-banner {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            background: var(--danger); color: #fff;
+            text-align: center; padding: 10px 16px;
+            font-size: 13px; font-weight: 600;
+            animation: slideDown .3s ease;
+        }
+        @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
+        /* -- Divider -- */
+        .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+        /* -- Utilities -- */
+        .gap-2  { display: flex; flex-direction: column; gap: 8px; }
+        .gap-3  { display: flex; flex-direction: column; gap: 12px; }
+        .gap-4  { display: flex; flex-direction: column; gap: 16px; }
+        .row    { display: flex; gap: 10px; align-items: center; }
+        .row-sb { display: flex; justify-content: space-between; align-items: center; }
+        .mt-2   { margin-top: 8px; }  .mt-3 { margin-top: 12px; }  .mt-4 { margin-top: 16px; }
+        .text-sm { font-size: 13px; }  .text-xs { font-size: 11px; }
+        .text-2  { color: var(--text-2); }  .text-3 { color: var(--text-3); }
+        .fw-6    { font-weight: 600; }  .fw-7 { font-weight: 700; }
+
+        /* ================================================================
+           CONTRACT-SPECIFIC STYLES
+           ================================================================ */
+
+        /* -- Stats bar -- */
+        .stats-bar {
+            display: flex; gap: 12px; flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--bg-card); border-radius: var(--r-md);
+            box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+            padding: 16px 20px; flex: 1; min-width: 140px;
+        }
+        .stat-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+        .stat-label { font-size: 0.85rem; color: var(--text-2); margin-top: 2px; }
+
+        /* -- Filter bar -- */
+        .filter-bar {
+            display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-bar input, .filter-bar select {
+            font-family: inherit; font-size: 14px; color: var(--text);
+            background: var(--bg-elevated); border: 1.5px solid var(--border);
+            border-radius: var(--r-sm); padding: 8px 12px;
+            transition: border-color .18s, box-shadow .18s;
+            -webkit-appearance: none; appearance: none;
+            width: auto; min-width: 0;
+        }
+        .filter-bar input:focus, .filter-bar select:focus {
+            outline: none; border-color: var(--accent); background: var(--bg-card);
+            box-shadow: 0 0 0 3px var(--accent-badge);
+        }
+        .filter-bar input { flex: 1; min-width: 160px; }
+        .filter-bar select { min-width: 120px; }
+
+        /* -- Sort button -- */
+        .sort-btn {
+            font-family: inherit; font-size: 13px; font-weight: 500;
+            color: var(--text-2); background: var(--bg-elevated);
+            border: 1.5px solid var(--border); border-radius: var(--r-sm);
+            padding: 8px 12px; cursor: pointer; white-space: nowrap;
+            transition: all .18s;
+        }
+        .sort-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .sort-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+        /* -- Contracts table -- */
+        .contracts-table {
+            width: 100%; border-collapse: collapse;
+            background: var(--bg-card); border-radius: var(--r-md);
+            overflow: hidden; box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+        }
+        .contracts-table th {
+            background: var(--bg-elevated); color: var(--text-2);
+            font-weight: 500; padding: 10px 14px; text-align: left;
+            font-size: 13px; white-space: nowrap; cursor: pointer;
+            user-select: none;
+        }
+        .contracts-table th:hover { color: var(--accent); }
+        .contracts-table td {
+            padding: 10px 14px; border-top: 1px solid var(--border);
+            font-size: 14px; vertical-align: middle;
+        }
+        .contracts-table tr:hover td { background: var(--accent-soft); }
+
+        /* -- Category badge -- */
+        .category-badge {
+            display: inline-block; border-radius: 6px; padding: 2px 8px;
+            font-size: 0.8rem; font-weight: 500;
+            background: var(--accent-badge); color: var(--accent);
+        }
+
+        /* -- Cancel urgency badge -- */
+        .cancel-badge {
+            display: inline-block; border-radius: 6px; padding: 2px 8px;
+            font-size: 0.8rem; font-weight: 600; white-space: nowrap;
+        }
+        .cancel-badge.danger { background: rgba(255,59,48,0.1); color: var(--danger); }
+        .cancel-badge.warning { background: rgba(255,159,10,0.1); color: var(--warning); }
+        .cancel-badge.ok { background: rgba(52,199,89,0.1); color: var(--success); }
+
+        /* -- Status badge -- */
+        .status-badge {
+            display: inline-block; border-radius: 6px; padding: 2px 8px;
+            font-size: 0.8rem; font-weight: 600;
+        }
+        .status-badge.active { background: rgba(52,199,89,0.1); color: var(--success); }
+        .status-badge.cancelled { background: var(--bg-elevated); color: var(--text-3); }
+        .status-badge.expired { background: rgba(255,59,48,0.1); color: var(--danger); }
+
+        /* -- Urgent contracts warning -- */
+        .urgent-section {
+            background: rgba(255,159,10,0.08); border: 1.5px solid rgba(255,159,10,0.2);
+            border-radius: var(--r-md); padding: 16px; margin-bottom: 20px;
+        }
+        .urgent-section h3 { font-size: 15px; font-weight: 700; color: var(--warning); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .urgent-item { font-size: 13px; color: var(--text); padding: 4px 0; }
+
+        /* -- Form group -- */
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block; font-size: 13px; font-weight: 600;
+            color: var(--text-2); margin-bottom: 6px; letter-spacing: -0.01em;
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        /* -- Toggle switch -- */
+        .toggle-switch {
+            position: relative; display: inline-block;
+            width: 44px; height: 26px; flex-shrink: 0;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background: var(--bg-elevated); border: 1.5px solid var(--border);
+            border-radius: 26px; transition: .2s;
+        }
+        .toggle-slider::before {
+            content: ''; position: absolute; height: 20px; width: 20px;
+            left: 2px; bottom: 2px; background: white;
+            border-radius: 50%; transition: .2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background: var(--accent); border-color: var(--accent);
+        }
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(18px);
+        }
+
+        /* -- Calculated preview -- */
+        .calculated-preview {
+            background: var(--bg-elevated); border: 1px solid var(--border);
+            border-radius: var(--r-sm); padding: 12px 14px;
+            font-size: 13px; color: var(--text-2);
+        }
+        .calculated-preview .preview-row {
+            display: flex; justify-content: space-between;
+            padding: 2px 0;
+        }
+        .calculated-preview .preview-label { color: var(--text-3); }
+        .calculated-preview .preview-value { font-weight: 600; color: var(--text); }
+
+        /* -- FAB (floating action button) -- */
+        .fab {
+            position: fixed; bottom: 24px; right: 24px; z-index: 100;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: var(--accent); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--shadow-lg);
+            transition: all .18s;
+        }
+        .fab:hover { background: var(--accent-h); transform: scale(1.05); box-shadow: 0 8px 30px var(--accent-glow); }
+        .fab:active { transform: scale(0.95); }
+
+        /* -- Contract card (mobile) -- */
+        .contract-card {
+            background: var(--bg-card); border-radius: var(--r-md);
+            box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+            padding: 14px 16px; margin-bottom: 10px;
+        }
+        .contract-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .contract-card-name { font-weight: 600; font-size: 15px; }
+        .contract-card-details { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; color: var(--text-2); }
+        .contract-card-actions { display: flex; gap: 6px; margin-top: 10px; justify-content: flex-end; }
+
+        /* -- Desktop: show table, hide cards -- */
+        .desktop-table { display: block; }
+        .mobile-cards { display: none; }
+
+        /* -- Empty state -- */
+        .empty-state {
+            text-align: center; padding: 48px 20px;
+            color: var(--text-3);
+        }
+        .empty-state svg { margin-bottom: 12px; opacity: 0.4; }
+        .empty-state p { font-size: 15px; }
+
+        @media (max-width: 768px) {
+            .desktop-table { display: none; }
+            .mobile-cards { display: block; }
+            .stats-bar { flex-direction: column; }
+            .stat-card { min-width: auto; }
+            .filter-bar { flex-direction: column; }
+            .filter-bar input, .filter-bar select { width: 100%; }
+            .form-row { grid-template-columns: 1fr; }
+            input[type="text"], input[type="number"], input[type="date"], textarea, select { font-size: 16px; }
+        }
+
+        @media (max-width: 640px) {
+            .card { border-radius: var(--r-md); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        // Theme: abends (19-7 Uhr) automatisch Dark Mode
+        window.__isEvening = function() {
+            var h = new Date().getHours();
+            return h >= 19 || h < 7;
+        };
+        (function() {
+            var saved = localStorage.getItem('theme');
+            var shouldDark = saved === 'dark' || (saved !== 'light' && window.__isEvening());
+            if (shouldDark) document.documentElement.setAttribute('data-theme', 'dark');
+        })();
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+        // Config — injected by server at render time
+        const API_BASE = window.location.origin;
+        const API_KEY = '%%API_KEY%%';
+        const NODE_ENV = '%%NODE_ENV%%';
+
+        // ============ API LAYER ============
+        async function apiCall(endpoint, options = {}) {
+            const headers = { 'Content-Type': 'application/json', 'x-api-key': API_KEY, ...options.headers };
+            const sessionToken = localStorage.getItem('contracts_session');
+            if (sessionToken) headers['x-session-token'] = sessionToken;
+            const response = await fetch(endpoint, { ...options, headers });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Anfrage fehlgeschlagen');
+            }
+            return response;
+        }
+
+        // ============ DYNAMIC FAVICON ============
+        const ENV_CONFIG = {
+            development: { label: 'DEV', color: '#007aff', letter: 'D' },
+            test:        { label: 'TEST', color: '#ff9f0a', letter: 'T' },
+            production:  { label: 'PROD', color: '#34c759', letter: 'P' }
+        };
+
+        (function setFavicon() {
+            const env = ENV_CONFIG[NODE_ENV] || ENV_CONFIG.development;
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${env.color}"/><text x="16" y="23" text-anchor="middle" font-size="20" font-weight="700" fill="#fff" font-family="system-ui">${env.letter}</text></svg>`;
+            document.getElementById('favicon').href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+            if (NODE_ENV !== 'production') {
+                document.title = `[${env.label}] Vertragsmanagement`;
+            }
+        })();
+
+        // ============ THEME HOOK ============
+        function useTheme() {
+            const [dark, setDark] = useState(() => document.documentElement.getAttribute('data-theme') === 'dark');
+            const [mode, setMode] = useState(() => localStorage.getItem('theme') || 'auto');
+
+            function apply(isDark) {
+                setDark(isDark);
+                document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            }
+
+            useEffect(() => {
+                if (mode !== 'auto') return;
+                function check() { apply(window.__isEvening()); }
+                check();
+                const id = setInterval(check, 60000);
+                return () => clearInterval(id);
+            }, [mode]);
+
+            const toggle = useCallback(() => {
+                const next = mode === 'auto' ? 'dark' : mode === 'dark' ? 'light' : 'auto';
+                setMode(next);
+                localStorage.setItem('theme', next);
+                if (next === 'auto') apply(window.__isEvening());
+                else apply(next === 'dark');
+            }, [mode]);
+
+            return { dark, toggle, mode };
+        }
+
+        // ============ TOAST HOOK ============
+        function useToast() {
+            const [toasts, setToasts] = useState([]);
+            const showToast = useCallback((message, type = 'success') => {
+                const id = Date.now() + Math.random();
+                setToasts(prev => [...prev, { id, message, type }]);
+                setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2500);
+            }, []);
+            return { toasts, showToast };
+        }
+
+        // ============ ICONS ============
+        const IconSun = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="4.22" y1="4.22" x2="5.99" y2="5.99"/><line x1="18.01" y1="18.01" x2="19.78" y2="19.78"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.22" y1="19.78" x2="5.99" y2="18.01"/><line x1="18.01" y1="5.99" x2="19.78" y2="4.22"/></svg>;
+        const IconMoon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
+        const IconAuto = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v1m0 16v1m-9-9h1m16 0h1m-2.64-6.36l-.7.7m-11.32 11.32l-.7.7m0-12.72l.7.7m11.32 11.32l.7.7"/></svg>;
+        const IconPlus = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+        const IconEdit = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+        const IconTrash = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
+        const IconDownload = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+        const IconUpload = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
+        const IconSearch = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+        const IconFilter = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
+        const IconChevronDown = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>;
+        const IconX = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+        const IconCheck = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>;
+        const IconLogout = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+        const IconFileText = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
+        const IconDollarSign = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
+        const IconCalendar = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+        const IconAlertTriangle = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+        const IconUser = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+        const IconLock = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>;
+        const IconBack = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
+        const IconEye = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+        const IconEyeOff = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
+        const IconArrowUp = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="18 15 12 9 6 15"/></svg>;
+        const IconArrowDown = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>;
+
+        // ============ TOAST COMPONENT ============
+        function Toast({ toasts }) {
+            if (!toasts || toasts.length === 0) return null;
+            return (
+                <div className="toast-container">
+                    {toasts.map(t => (
+                        <div key={t.id} className={`toast toast-${t.type}`}>{t.message}</div>
+                    ))}
+                </div>
+            );
+        }
+
+        // ============ ENVIRONMENT BADGE ============
+        function EnvBadge() {
+            const env = ENV_CONFIG[NODE_ENV] || ENV_CONFIG.development;
+            return <span className={`env-badge badge-${NODE_ENV}`}>{env.label}</span>;
+        }
+
+        // ============ OFFLINE BANNER ============
+        function OfflineBanner({ visible }) {
+            if (!visible) return null;
+            return <div className="offline-banner">Keine Verbindung -- Aenderungen werden nicht gespeichert</div>;
+        }
+
+        // ============ CHANGELOG MODAL ============
+        function ChangelogModal({ onClose }) {
+            const [changelog, setChangelog] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                fetch(`${API_BASE}/api/changelog`)
+                    .then(r => r.json())
+                    .then(data => { setChangelog(data); setLoading(false); })
+                    .catch(() => setLoading(false));
+            }, []);
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-handle" />
+                        <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 16 }}>Changelog</h3>
+                        <div className="gap-4" style={{ maxHeight: '60dvh', overflowY: 'auto' }}>
+                            {loading ? (
+                                <p className="text-2" style={{ padding: '24px 0', textAlign: 'center' }}>Laedt...</p>
+                            ) : (
+                                changelog.map(entry => (
+                                    <div key={entry.version} className="changelog-version-block">
+                                        <div className="changelog-version-header">
+                                            <span className="version-number">v{entry.version}</span>
+                                            <span className={`version-type type-${entry.type}`}>{entry.type}</span>
+                                            <span className="version-date">{new Date(entry.date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                        </div>
+                                        <ul className="changelog-list">
+                                            {entry.changes.map((change, i) => (
+                                                <li key={i} className="changelog-item">{change}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <button className="btn btn-secondary btn-full mt-4" onClick={onClose}>Schliessen</button>
+                    </div>
+                </div>
+            );
+        }
+
+        // ============ DELETE CONFIRM MODAL ============
+        function DeleteConfirmModal({ message, onConfirm, onCancel }) {
+            return (
+                <div className="modal-overlay" onClick={onCancel}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-handle" />
+                        <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 8 }}>Wirklich loeschen?</h3>
+                        <p className="text-sm text-2" style={{ marginBottom: 20, lineHeight: 1.5 }}>
+                            {message}
+                        </p>
+                        <div className="row" style={{ gap: 10 }}>
+                            <button className="btn btn-secondary btn-full" onClick={onCancel}>Abbrechen</button>
+                            <button className="btn btn-danger btn-full" onClick={onConfirm}>Loeschen</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ============ EXPORT MODAL ============
+        function ExportModal({ onClose, showToast, onImported }) {
+            const [importing, setImporting] = useState(false);
+            const fileRef = useRef(null);
+
+            function download(format) {
+                const sessionToken = localStorage.getItem('contracts_session') || '';
+                const url = `/api/export/${format}?session_token=${encodeURIComponent(sessionToken)}&api_key=${encodeURIComponent(API_KEY)}&t=${Date.now()}`;
+                const a = document.createElement('a');
+                a.href = url;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showToast(`${format.toUpperCase()}-Export gestartet`);
+            }
+
+            async function handleImport() {
+                const file = fileRef.current?.files?.[0];
+                if (!file) return showToast('Bitte eine JSON-Datei auswaehlen', 'error');
+                setImporting(true);
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+                    if (!Array.isArray(data)) {
+                        throw new Error('Datei muss ein Array von Vertraegen enthalten');
+                    }
+                    const r = await apiCall(`${API_BASE}/api/import/json`, {
+                        method: 'POST',
+                        body: JSON.stringify({ data })
+                    });
+                    const result = await r.json();
+                    showToast(`${result.imported} Vertraege importiert`);
+                    onImported();
+                    onClose();
+                } catch (err) {
+                    showToast(err.message || 'Import fehlgeschlagen', 'error');
+                } finally {
+                    setImporting(false);
+                }
+            }
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-handle" />
+                        <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 16 }}>Daten exportieren</h3>
+                        <div className="gap-3">
+                            <button className="btn btn-primary btn-full" onClick={() => download('json')}>
+                                Als JSON exportieren
+                            </button>
+                            <button className="btn btn-secondary btn-full" onClick={() => download('csv')}>
+                                Als CSV exportieren (Excel-kompatibel)
+                            </button>
+                            <p className="text-xs text-3" style={{ textAlign: 'center' }}>
+                                Alle Vertraege werden heruntergeladen.
+                            </p>
+                        </div>
+
+                        <div className="divider" />
+
+                        <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 16 }}>Daten importieren</h3>
+                        <div className="gap-3">
+                            <input ref={fileRef} type="file" accept=".json" style={{ fontSize: 14 }} />
+                            <button className="btn btn-primary btn-full" onClick={handleImport} disabled={importing}>
+                                {importing ? 'Importiere...' : 'JSON importieren'}
+                            </button>
+                            <p className="text-xs text-3" style={{ textAlign: 'center' }}>
+                                Importiert eine zuvor exportierte JSON-Datei.
+                            </p>
+                        </div>
+
+                        <div style={{ marginTop: 16 }}>
+                            <button className="btn btn-ghost btn-full" onClick={onClose}>Schliessen</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ============ CONTRACT FORM MODAL ============
+        function ContractForm({ contract, categories, onSave, onClose }) {
+            const isEdit = !!contract;
+            const [form, setForm] = useState(contract ? {
+                name: contract.name,
+                category: contract.category,
+                start_date: contract.start_date,
+                duration_months: contract.duration_months,
+                cancellation_period_months: contract.cancellation_period_months,
+                cost: contract.cost !== undefined ? contract.cost : contract.monthly_cost,
+                billing_interval: contract.billing_interval || 'monthly',
+                cashback: contract.cashback || '',
+                notify: contract.notify !== undefined ? !!contract.notify : true,
+                split_count: contract.split_count || 1,
+                description: contract.description || '',
+                auto_renew: !!contract.auto_renew,
+                notes: contract.notes || '',
+                status: contract.status || 'active'
+            } : {
+                name: '',
+                category: categories[0] || 'Internet',
+                start_date: new Date().toISOString().split('T')[0],
+                duration_months: 24,
+                cancellation_period_months: 3,
+                cost: 0,
+                billing_interval: 'monthly',
+                cashback: '',
+                notify: true,
+                split_count: 1,
+                description: '',
+                auto_renew: true,
+                notes: '',
+                status: 'active'
+            });
+            const [saving, setSaving] = useState(false);
+
+            const previewDates = useMemo(() => {
+                if (!form.start_date || !form.duration_months) return null;
+                const start = new Date(form.start_date);
+                const end = new Date(start);
+                end.setMonth(end.getMonth() + parseInt(form.duration_months));
+                const now = new Date();
+                if (form.auto_renew) {
+                    while (end <= now) {
+                        end.setMonth(end.getMonth() + parseInt(form.duration_months));
+                    }
+                }
+                const cancel = new Date(end);
+                cancel.setMonth(cancel.getMonth() - parseInt(form.cancellation_period_months || 0));
+                return {
+                    end_date: end.toLocaleDateString('de-DE'),
+                    cancellation_date: cancel.toLocaleDateString('de-DE')
+                };
+            }, [form.start_date, form.duration_months, form.cancellation_period_months, form.auto_renew]);
+
+            const handleChange = (field, value) => {
+                setForm(prev => ({ ...prev, [field]: value }));
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (!form.name.trim()) return;
+                setSaving(true);
+                try {
+                    await onSave({
+                        ...form,
+                        duration_months: parseInt(form.duration_months),
+                        cancellation_period_months: parseInt(form.cancellation_period_months),
+                        cost: parseFloat(form.cost),
+                        billing_interval: form.billing_interval,
+                        cashback: form.cashback || undefined,
+                        notify: form.notify,
+                        split_count: parseInt(form.split_count) || 1,
+                    });
+                } finally {
+                    setSaving(false);
+                }
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-handle" />
+                        <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 16 }}>
+                            {isEdit ? 'Vertrag bearbeiten' : 'Neuer Vertrag'}
+                        </h3>
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label>Name *</label>
+                                <input type="text" value={form.name} onChange={e => handleChange('name', e.target.value)}
+                                       placeholder="z.B. Telekom DSL" required autoFocus />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Kategorie</label>
+                                <select value={form.category} onChange={e => handleChange('category', e.target.value)}>
+                                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Startdatum</label>
+                                    <input type="date" value={form.start_date} onChange={e => handleChange('start_date', e.target.value)} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Laufzeit (Monate)</label>
+                                    <input type="number" value={form.duration_months} onChange={e => handleChange('duration_months', e.target.value)}
+                                           min="1" max="600" />
+                                </div>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Kuendigungsfrist (Monate)</label>
+                                    <input type="number" value={form.cancellation_period_months} onChange={e => handleChange('cancellation_period_months', e.target.value)}
+                                           min="0" max="24" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Kosten (EUR)</label>
+                                    <input type="number" value={form.cost} onChange={e => handleChange('cost', e.target.value)}
+                                           min="0" max="99999" step="0.01" />
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Zahlungsintervall</label>
+                                <select value={form.billing_interval} onChange={e => handleChange('billing_interval', e.target.value)}>
+                                    <option value="monthly">Monatlich</option>
+                                    <option value="quarterly">Quartalsweise</option>
+                                    <option value="semi-annual">Halbjaehrlich</option>
+                                    <option value="annual">Jaehrlich</option>
+                                </select>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Cashback</label>
+                                    <input type="text" maxLength="200" placeholder="z.B. 25 EUR via Check24"
+                                        value={form.cashback} onChange={e => handleChange('cashback', e.target.value)} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Geteilt mit (Personen)</label>
+                                    <input type="number" value={form.split_count} onChange={e => handleChange('split_count', e.target.value)}
+                                           min="1" max="20" />
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Beschreibung</label>
+                                <textarea value={form.description} onChange={e => handleChange('description', e.target.value)}
+                                          placeholder="Optionale Beschreibung..." rows={2} />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Notizen</label>
+                                <textarea value={form.notes} onChange={e => handleChange('notes', e.target.value)}
+                                          placeholder="Optionale Notizen..." rows={2} />
+                            </div>
+
+                            <div className="form-group">
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <label style={{ margin: 0 }}>Auto-Verlaengerung</label>
+                                    <label className="toggle-switch">
+                                        <input type="checkbox" checked={form.auto_renew}
+                                               onChange={e => handleChange('auto_renew', e.target.checked)} />
+                                        <span className="toggle-slider" />
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <label style={{ margin: 0 }}>Kuendigungswarnung</label>
+                                    <label className="toggle-switch">
+                                        <input type="checkbox" checked={form.notify}
+                                               onChange={e => handleChange('notify', e.target.checked)} />
+                                        <span className="toggle-slider" />
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Status</label>
+                                <select value={form.status} onChange={e => handleChange('status', e.target.value)}>
+                                    <option value="active">Aktiv</option>
+                                    <option value="cancelled">Gekuendigt</option>
+                                </select>
+                            </div>
+
+                            {previewDates && (
+                                <div className="calculated-preview" style={{ marginBottom: 16 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                        Berechnete Termine
+                                    </div>
+                                    <div className="preview-row">
+                                        <span className="preview-label">Vertragsende</span>
+                                        <span className="preview-value">{previewDates.end_date}</span>
+                                    </div>
+                                    <div className="preview-row">
+                                        <span className="preview-label">Kuendigungsdatum</span>
+                                        <span className="preview-value">{previewDates.cancellation_date}</span>
+                                    </div>
+                                    {parseFloat(form.cost) > 0 && form.billing_interval && form.billing_interval !== 'monthly' && (
+                                        <div className="preview-row" style={{ marginTop: 4, borderTop: '1px solid var(--border)', paddingTop: 4 }}>
+                                            <span className="preview-label">Monatliche Kosten</span>
+                                            <span className="preview-value">{(parseFloat(form.cost) / ({quarterly:3,'semi-annual':6,annual:12}[form.billing_interval] || 1)).toFixed(2)} EUR</span>
+                                        </div>
+                                    )}
+                                    {parseFloat(form.cost) > 0 && (
+                                        <div className="preview-row" style={{ marginTop: form.billing_interval === 'monthly' ? 4 : 0, borderTop: form.billing_interval === 'monthly' ? '1px solid var(--border)' : 'none', paddingTop: form.billing_interval === 'monthly' ? 4 : 0 }}>
+                                            <span className="preview-label">Jaehrliche Kosten</span>
+                                            <span className="preview-value">{(parseFloat(form.cost) / ({monthly:1,quarterly:3,'semi-annual':6,annual:12}[form.billing_interval] || 1) * 12).toFixed(2)} EUR</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="row" style={{ gap: 10 }}>
+                                <button type="button" className="btn btn-secondary btn-full" onClick={onClose}>Abbrechen</button>
+                                <button type="submit" className="btn btn-primary btn-full" disabled={saving} style={{ opacity: saving ? 0.6 : 1 }}>
+                                    {saving ? 'Speichere...' : (isEdit ? 'Speichern' : 'Erstellen')}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // ============ MAIN APP ============
+        function Vertragsmanagement() {
+            const { dark, toggle: toggleTheme, mode: themeMode } = useTheme();
+            const { toasts, showToast } = useToast();
+
+            // Auth state
+            const [view, setView] = useState('login'); // 'login', 'password', 'dashboard'
+            const [users, setUsers] = useState([]);
+            const [user, setUser] = useState(localStorage.getItem('contracts_user') || '');
+            const [userId, setUserId] = useState(null);
+            const [selectedUser, setSelectedUser] = useState('');
+            const [passwordMode, setPasswordMode] = useState(null); // null|'login'|'set-password'|'register'
+            const [showPw, setShowPw] = useState(false);
+
+            // Data state
+            const [contracts, setContracts] = useState([]);
+            const [stats, setStats] = useState(null);
+            const [categories, setCategories] = useState([]);
+            const [filter, setFilter] = useState({ category: '', status: '', search: '' });
+            const [sort, setSort] = useState({ field: 'cancellation_date', dir: 'asc' });
+
+            // UI state
+            const [editContract, setEditContract] = useState(null); // null=closed, false=new, object=edit
+            const [showExport, setShowExport] = useState(false);
+            const [showChangelog, setShowChangelog] = useState(false);
+            const [deleteConfirm, setDeleteConfirm] = useState(null); // null or {id, name}
+            const [isOnline, setIsOnline] = useState(navigator.onLine);
+            const [isLoading, setIsLoading] = useState(true);
+            const [version, setVersion] = useState('');
+
+            // Online/Offline listeners
+            useEffect(() => {
+                const goOffline = () => setIsOnline(false);
+                const goOnline = () => { setIsOnline(true); showToast('Wieder online'); };
+                window.addEventListener('offline', goOffline);
+                window.addEventListener('online', goOnline);
+                return () => { window.removeEventListener('offline', goOffline); window.removeEventListener('online', goOnline); };
+            }, []);
+
+            // Fetch categories and version on mount
+            useEffect(() => {
+                fetch(`${API_BASE}/api/categories`).then(r => r.json()).then(setCategories).catch(() => {});
+                fetch(`${API_BASE}/api/version`).then(r => r.json()).then(d => setVersion(d.version)).catch(() => {});
+            }, []);
+
+            // Auto-login on mount
+            useEffect(() => {
+                (async () => {
+                    const savedToken = localStorage.getItem('contracts_session');
+                    if (savedToken) {
+                        try {
+                            const r = await apiCall(`${API_BASE}/api/auth/verify`, {
+                                method: 'POST',
+                                body: JSON.stringify({ token: savedToken })
+                            });
+                            const data = await r.json();
+                            if (data.success && data.user) {
+                                localStorage.setItem('contracts_user', data.user);
+                                setUser(data.user);
+                                setUserId(data.userId);
+                                setView('dashboard');
+                                setIsLoading(false);
+                                return;
+                            }
+                        } catch (_) {}
+                        localStorage.removeItem('contracts_session');
+                    }
+                    // No valid session -- load users
+                    await loadUsers();
+                    setIsLoading(false);
+                })();
+            }, []);
+
+            // Load contracts when in dashboard
+            useEffect(() => {
+                if (view === 'dashboard' && user) {
+                    loadContracts();
+                }
+            }, [view, user]);
+
+            const loadUsers = async () => {
+                try {
+                    const r = await apiCall(`${API_BASE}/api/users`);
+                    const data = await r.json();
+                    setUsers(data);
+                } catch (e) {}
+            };
+
+            const loadContracts = async () => {
+                try {
+                    const [contractsRes, statsRes] = await Promise.all([
+                        apiCall(`${API_BASE}/api/contracts`),
+                        apiCall(`${API_BASE}/api/contracts/stats`)
+                    ]);
+                    const contractsData = await contractsRes.json();
+                    const statsData = await statsRes.json();
+                    setContracts(contractsData);
+                    setStats(statsData);
+                } catch (e) {
+                    showToast('Fehler beim Laden der Vertraege', 'error');
+                }
+            };
+
+            // ---- Auth handlers ----
+            const handleUserClick = (userObj) => {
+                setSelectedUser(userObj.name);
+                setShowPw(false);
+                if (userObj.hasPassword) {
+                    setPasswordMode('login');
+                } else {
+                    setPasswordMode('set-password');
+                }
+            };
+
+            const handleNewUser = (name) => {
+                if (!name.trim()) return;
+                const n = name.trim();
+                if (users.find(u => u.name === n)) {
+                    showToast('Benutzer existiert bereits', 'error');
+                    return;
+                }
+                setSelectedUser(n);
+                setShowPw(false);
+                setPasswordMode('register');
+            };
+
+            const handleLogin = async (password) => {
+                try {
+                    const r = await apiCall(`${API_BASE}/api/auth/login`, {
+                        method: 'POST',
+                        body: JSON.stringify({ user: selectedUser, password })
+                    });
+                    const data = await r.json();
+                    if (data.success) {
+                        if (data.token) localStorage.setItem('contracts_session', data.token);
+                        localStorage.setItem('contracts_user', selectedUser);
+                        setUser(selectedUser);
+                        setView('dashboard');
+                        setPasswordMode(null);
+                    } else if (data.needsPassword) {
+                        setPasswordMode('set-password');
+                    }
+                } catch (e) {
+                    showToast(e.message || 'Anmeldung fehlgeschlagen', 'error');
+                }
+            };
+
+            const handleSetPassword = async (password) => {
+                try {
+                    const r = await apiCall(`${API_BASE}/api/auth/set-password`, {
+                        method: 'POST',
+                        body: JSON.stringify({ user: selectedUser, password })
+                    });
+                    const data = await r.json();
+                    if (data.success) {
+                        if (data.token) localStorage.setItem('contracts_session', data.token);
+                        localStorage.setItem('contracts_user', selectedUser);
+                        setUser(selectedUser);
+                        setView('dashboard');
+                        setPasswordMode(null);
+                    }
+                } catch (e) {
+                    showToast(e.message || 'Fehler beim Setzen des Passworts', 'error');
+                }
+            };
+
+            const handleRegister = async (password) => {
+                try {
+                    const r = await apiCall(`${API_BASE}/api/users/${encodeURIComponent(selectedUser)}`, {
+                        method: 'POST',
+                        body: JSON.stringify({ password })
+                    });
+                    const data = await r.json();
+                    if (data.success) {
+                        if (data.token) localStorage.setItem('contracts_session', data.token);
+                        localStorage.setItem('contracts_user', selectedUser);
+                        setUser(selectedUser);
+                        setView('dashboard');
+                        setPasswordMode(null);
+                    }
+                } catch (e) {
+                    showToast(e.message || 'Fehler beim Erstellen', 'error');
+                }
+            };
+
+            const handlePasswordBack = () => {
+                setPasswordMode(null);
+                setSelectedUser('');
+                setShowPw(false);
+            };
+
+            const handleLogout = async () => {
+                const token = localStorage.getItem('contracts_session');
+                if (token) {
+                    try {
+                        await apiCall(`${API_BASE}/api/auth/logout`, {
+                            method: 'POST',
+                            body: JSON.stringify({ token })
+                        });
+                    } catch (_) {}
+                }
+                localStorage.removeItem('contracts_session');
+                localStorage.removeItem('contracts_user');
+                setUser('');
+                setUserId(null);
+                setContracts([]);
+                setStats(null);
+                setView('login');
+                setPasswordMode(null);
+                setSelectedUser('');
+                loadUsers();
+            };
+
+            // ---- Contract handlers ----
+            const handleSaveContract = async (formData) => {
+                try {
+                    if (editContract && editContract.id) {
+                        // Update existing
+                        await apiCall(`${API_BASE}/api/contracts/${editContract.id}`, {
+                            method: 'PUT',
+                            body: JSON.stringify(formData)
+                        });
+                        showToast('Vertrag aktualisiert');
+                    } else {
+                        // Create new
+                        await apiCall(`${API_BASE}/api/contracts`, {
+                            method: 'POST',
+                            body: JSON.stringify(formData)
+                        });
+                        showToast('Vertrag erstellt');
+                    }
+                    setEditContract(null);
+                    loadContracts();
+                } catch (e) {
+                    showToast(e.message || 'Fehler beim Speichern', 'error');
+                }
+            };
+
+            const handleDeleteContract = async () => {
+                if (!deleteConfirm) return;
+                try {
+                    await apiCall(`${API_BASE}/api/contracts/${deleteConfirm.id}`, {
+                        method: 'DELETE'
+                    });
+                    showToast(`"${deleteConfirm.name}" geloescht`);
+                    setDeleteConfirm(null);
+                    loadContracts();
+                } catch (e) {
+                    showToast(e.message || 'Fehler beim Loeschen', 'error');
+                }
+            };
+
+            // ---- Filtering & Sorting ----
+            const getFilteredContracts = () => {
+                let filtered = [...contracts];
+
+                if (filter.search) {
+                    const s = filter.search.toLowerCase();
+                    filtered = filtered.filter(c =>
+                        c.name.toLowerCase().includes(s) ||
+                        (c.description && c.description.toLowerCase().includes(s)) ||
+                        (c.notes && c.notes.toLowerCase().includes(s))
+                    );
+                }
+                if (filter.category) {
+                    filtered = filtered.filter(c => c.category === filter.category);
+                }
+                if (filter.status) {
+                    filtered = filtered.filter(c => c.status === filter.status);
+                }
+
+                filtered.sort((a, b) => {
+                    let valA, valB;
+                    switch (sort.field) {
+                        case 'name':
+                            valA = a.name.toLowerCase();
+                            valB = b.name.toLowerCase();
+                            break;
+                        case 'monthly_cost':
+                            valA = a.monthly_cost;
+                            valB = b.monthly_cost;
+                            break;
+                        case 'cancellation_date':
+                            valA = a.cancellation_date || '9999-99-99';
+                            valB = b.cancellation_date || '9999-99-99';
+                            break;
+                        case 'category':
+                            valA = a.category;
+                            valB = b.category;
+                            break;
+                        default:
+                            valA = a.name.toLowerCase();
+                            valB = b.name.toLowerCase();
+                    }
+                    if (valA < valB) return sort.dir === 'asc' ? -1 : 1;
+                    if (valA > valB) return sort.dir === 'asc' ? 1 : -1;
+                    return 0;
+                });
+
+                return filtered;
+            };
+
+            const toggleSort = (field) => {
+                setSort(prev => ({
+                    field,
+                    dir: prev.field === field && prev.dir === 'asc' ? 'desc' : 'asc'
+                }));
+            };
+
+            const SortIndicator = ({ field }) => {
+                if (sort.field !== field) return null;
+                return sort.dir === 'asc' ? <IconArrowUp /> : <IconArrowDown />;
+            };
+
+            // ---- Helpers ----
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '-';
+                return new Date(dateStr + 'T12:00:00').toLocaleDateString('de-DE');
+            };
+
+            const formatCost = (cost) => {
+                return parseFloat(cost).toFixed(2) + ' EUR';
+            };
+
+            const getDaysUntil = (dateStr) => {
+                if (!dateStr) return Infinity;
+                const target = new Date(dateStr + 'T00:00:00');
+                const now = new Date();
+                now.setHours(0, 0, 0, 0);
+                return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+            };
+
+            const getCancelUrgency = (contract) => {
+                if (contract.status !== 'active' || !contract.notify) return 'ok';
+                const days = getDaysUntil(contract.cancellation_date);
+                if (days < 0) return 'ok'; // past cancellation date
+                if (days <= 30) return 'danger';
+                if (days <= 90) return 'warning';
+                return 'ok';
+            };
+
+            const getCancelLabel = (contract) => {
+                if (contract.status !== 'active') return formatDate(contract.cancellation_date);
+                const days = getDaysUntil(contract.cancellation_date);
+                if (days < 0) return 'Abgelaufen';
+                if (days === 0) return 'Heute!';
+                if (days === 1) return 'Morgen!';
+                if (days <= 90) return `${days} Tage`;
+                return formatDate(contract.cancellation_date);
+            };
+
+            const getUrgentContracts = () => {
+                return contracts.filter(c => {
+                    if (c.status !== 'active' || !c.notify) return false;
+                    const days = getDaysUntil(c.cancellation_date);
+                    return days >= 0 && days <= 90;
+                }).sort((a, b) => getDaysUntil(a.cancellation_date) - getDaysUntil(b.cancellation_date));
+            };
+
+            const getActiveCount = () => contracts.filter(c => c.status === 'active').length;
+
+            // ---- Theme icon ----
+            const ThemeIcon = () => {
+                if (themeMode === 'auto') return <IconAuto />;
+                return dark ? <IconSun /> : <IconMoon />;
+            };
+            const themeTitle = themeMode === 'auto' ? 'Auto (abends dunkel)' : themeMode === 'dark' ? 'Immer dunkel' : 'Immer hell';
+
+            // ============ PASSWORD FORM ============
+            const PasswordForm = () => {
+                const [pw, setPw] = useState('');
+                const [pw2, setPw2] = useState('');
+                const [busy, setBusy] = useState(false);
+                const needsConfirm = passwordMode === 'set-password' || passwordMode === 'register';
+
+                const title = passwordMode === 'login' ? 'Anmelden' :
+                              passwordMode === 'set-password' ? 'Passwort erstellen' : 'Neuer Benutzer';
+                const subtitle = passwordMode === 'login' ? `Passwort fuer ${selectedUser}` :
+                                 passwordMode === 'set-password' ? `Erstelle ein Passwort fuer ${selectedUser}` :
+                                 `Passwort fuer ${selectedUser} festlegen`;
+
+                const submit = async () => {
+                    if (!pw) return showToast('Bitte Passwort eingeben', 'error');
+                    if (pw.length < 4) return showToast('Passwort: mindestens 4 Zeichen', 'error');
+                    if (needsConfirm && pw !== pw2) return showToast('Passwoerter stimmen nicht ueberein', 'error');
+                    setBusy(true);
+                    if (passwordMode === 'login') await handleLogin(pw);
+                    else if (passwordMode === 'set-password') await handleSetPassword(pw);
+                    else await handleRegister(pw);
+                    setBusy(false);
+                };
+
+                return (
+                    <div className="gap-3">
+                        <div>
+                            <button className="btn btn-ghost" onClick={handlePasswordBack} style={{ marginBottom: 8, marginLeft: -8, color: 'var(--accent)', gap: 4, borderRadius: 'var(--r-sm)', fontSize: 14 }}>
+                                <IconBack /> Zurueck
+                            </button>
+                            <div className="row" style={{ gap: 10, marginBottom: 4 }}>
+                                <IconLock />
+                                <span className="fw-7" style={{ fontSize: 17 }}>{title}</span>
+                            </div>
+                            <p className="text-sm text-2">{subtitle}</p>
+                        </div>
+                        <div className="pw-field">
+                            <input type={showPw ? 'text' : 'password'} value={pw} onChange={e => setPw(e.target.value)} placeholder="Passwort" autoFocus onKeyDown={e => e.key === 'Enter' && (!needsConfirm ? submit() : null)} />
+                            <button className="pw-toggle" type="button" onClick={() => setShowPw(v => !v)} tabIndex={-1}>
+                                {showPw ? <IconEyeOff /> : <IconEye />}
+                            </button>
+                        </div>
+                        {needsConfirm && (
+                            <div className="pw-field">
+                                <input type={showPw ? 'text' : 'password'} value={pw2} onChange={e => setPw2(e.target.value)} placeholder="Passwort bestaetigen" onKeyDown={e => e.key === 'Enter' && submit()} />
+                            </div>
+                        )}
+                        <button className="btn btn-primary btn-full" onClick={submit} disabled={busy} style={{ opacity: busy ? 0.6 : 1 }}>
+                            {busy ? 'Bitte warten...' : passwordMode === 'login' ? 'Anmelden' : 'Passwort setzen'}
+                        </button>
+                    </div>
+                );
+            };
+
+            // ============ LOADING ============
+            if (isLoading) return (
+                <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <OfflineBanner visible={!isOnline} />
+                    <p className="text-2" style={{ fontSize: 16, fontWeight: 500 }}>Laedt...</p>
+                    <Toast toasts={toasts} />
+                </div>
+            );
+
+            // ============ LOGIN VIEW ============
+            if (view === 'login') {
+                return (
+                    <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                        <OfflineBanner visible={!isOnline} />
+                        <div className="card" style={{ padding: '36px 32px', maxWidth: 400, width: '100%' }}>
+                            <div style={{ textAlign: 'center', marginBottom: 28 }}>
+                                <div style={{ width: 52, height: 52, borderRadius: 16, background: 'var(--accent-soft)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', marginBottom: 16 }}>
+                                    <IconFileText />
+                                </div>
+                                <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em' }}>Vertragsmanagement</h1>
+                                {!passwordMode && (
+                                    <p className="text-sm text-2 mt-2">
+                                        {users.length > 0 ? 'Waehle deinen Benutzer' : 'Wie heisst du?'}
+                                    </p>
+                                )}
+                                <p className="text-xs text-3 mt-2">
+                                    {version && <span style={{ cursor: 'pointer', textDecoration: 'underline dotted' }} onClick={() => setShowChangelog(true)}>v{version}</span>}
+                                    {version && ' \u00b7 '}<EnvBadge />
+                                </p>
+                            </div>
+
+                            {passwordMode ? (
+                                <PasswordForm />
+                            ) : (
+                                <>
+                                    {users.length > 0 && (
+                                        <div style={{ marginBottom: 20 }}>
+                                            <div className="gap-2">
+                                                {users.map(u => (
+                                                    <div key={u.name} className="row" style={{ gap: 8 }}>
+                                                        <button className="user-btn" onClick={() => handleUserClick(u)} style={{ flex: 1 }}>
+                                                            <span>{u.name}</span>
+                                                            {u.hasPassword && <IconLock />}
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="row" style={{ margin: '20px 0', gap: 12 }}>
+                                                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                                                <span className="text-xs text-3">oder neu</span>
+                                                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <input type="text" placeholder="Dein Name..." style={{ marginBottom: 12 }}
+                                           onKeyDown={(e) => e.key === 'Enter' && handleNewUser(e.target.value)}
+                                           autoFocus={users.length === 0} />
+                                    <button className="btn btn-primary btn-full" onClick={(e) => handleNewUser(e.target.previousElementSibling.value)}>
+                                        Starten
+                                    </button>
+                                </>
+                            )}
+
+                            <div className="row" style={{ justifyContent: 'center', marginTop: 16 }}>
+                                <button className="btn btn-ghost" title={themeTitle} onClick={toggleTheme}>
+                                    <ThemeIcon />
+                                </button>
+                            </div>
+                        </div>
+
+                        {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
+                        <Toast toasts={toasts} />
+                    </div>
+                );
+            }
+
+            // ============ DASHBOARD VIEW ============
+            const filteredContracts = getFilteredContracts();
+            const urgentContracts = getUrgentContracts();
+            const activeCount = getActiveCount();
+            const usedCategories = [...new Set(contracts.map(c => c.category))];
+
+            return (
+                <div className="page">
+                    <OfflineBanner visible={!isOnline} />
+
+                    {/* Sticky Nav */}
+                    <nav className="nav">
+                        <div className="nav-inner">
+                            <div className="row" style={{ gap: 10 }}>
+                                <span className="nav-title">Vertragsmanagement</span>
+                                {version && <span className="text-xs text-3" style={{ cursor: 'pointer', textDecoration: 'underline dotted' }} onClick={() => setShowChangelog(true)} title="Changelog">v{version}</span>}
+                                <EnvBadge />
+                            </div>
+                            <div className="row" style={{ gap: 4 }}>
+                                <span className="text-xs text-2" style={{ marginRight: 4 }}>{user}</span>
+                                <button className="btn btn-ghost" title={themeTitle} onClick={toggleTheme}>
+                                    <ThemeIcon />
+                                </button>
+                                <button className="btn btn-ghost" title="Export / Import" onClick={() => setShowExport(true)}>
+                                    <IconDownload />
+                                </button>
+                                <button className="btn btn-ghost" title="Abmelden" onClick={handleLogout}>
+                                    <IconLogout />
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+
+                    <div className="max-w" style={{ paddingTop: 20 }}>
+
+                        {/* Stats Bar */}
+                        {stats && (
+                            <div className="stats-bar">
+                                <div className="stat-card">
+                                    <div className="stat-value" style={{ color: 'var(--accent)' }}>{stats.totalMonthly.toFixed(2)} EUR</div>
+                                    <div className="stat-label">Monatlich gesamt</div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="stat-value" style={{ color: 'var(--accent)' }}>{(stats.totalMonthlyEffective ?? stats.totalMonthly).toFixed(2)} EUR</div>
+                                    <div className="stat-label">Dein Anteil / Monat</div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="stat-value" style={{ color: 'var(--warning)' }}>{(stats.totalYearlyEffective ?? stats.totalYearly).toFixed(2)} EUR</div>
+                                    <div className="stat-label">Dein Anteil / Jahr</div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="stat-value" style={{ color: 'var(--success)' }}>{activeCount}</div>
+                                    <div className="stat-label">Aktive Vertraege</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Urgent Contracts Warning */}
+                        {urgentContracts.length > 0 && (
+                            <div className="urgent-section">
+                                <h3><IconAlertTriangle /> Kuendigungsfristen beachten!</h3>
+                                {urgentContracts.map(c => {
+                                    const days = getDaysUntil(c.cancellation_date);
+                                    return (
+                                        <div key={c.id} className="urgent-item">
+                                            <strong>{c.name}</strong>
+                                            {' \u2013 '}
+                                            <span className={`cancel-badge ${days <= 30 ? 'danger' : 'warning'}`}>
+                                                {days === 0 ? 'Heute!' : days === 1 ? 'Morgen!' : `${days} Tage`}
+                                            </span>
+                                            <span className="text-3" style={{ marginLeft: 8, fontSize: 12 }}>
+                                                ({formatDate(c.cancellation_date)})
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Filter Bar */}
+                        <div className="filter-bar">
+                            <input type="text" placeholder="Suchen..." value={filter.search}
+                                   onChange={e => setFilter(prev => ({ ...prev, search: e.target.value }))} />
+                            <select value={filter.category} onChange={e => setFilter(prev => ({ ...prev, category: e.target.value }))}>
+                                <option value="">Alle Kategorien</option>
+                                {usedCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <select value={filter.status} onChange={e => setFilter(prev => ({ ...prev, status: e.target.value }))}>
+                                <option value="">Alle Status</option>
+                                <option value="active">Aktiv</option>
+                                <option value="cancelled">Gekuendigt</option>
+                            </select>
+                            <button className={`sort-btn ${sort.field === 'name' ? 'active' : ''}`} onClick={() => toggleSort('name')}>
+                                Name <SortIndicator field="name" />
+                            </button>
+                            <button className={`sort-btn ${sort.field === 'monthly_cost' ? 'active' : ''}`} onClick={() => toggleSort('monthly_cost')}>
+                                Kosten <SortIndicator field="monthly_cost" />
+                            </button>
+                            <button className={`sort-btn ${sort.field === 'cancellation_date' ? 'active' : ''}`} onClick={() => toggleSort('cancellation_date')}>
+                                Kuendigung <SortIndicator field="cancellation_date" />
+                            </button>
+                        </div>
+
+                        {/* Empty state */}
+                        {filteredContracts.length === 0 && (
+                            <div className="empty-state">
+                                <IconFileText />
+                                <p>{contracts.length === 0 ? 'Noch keine Vertraege vorhanden.' : 'Keine Vertraege fuer diesen Filter.'}</p>
+                                {contracts.length === 0 && (
+                                    <button className="btn btn-primary mt-4" onClick={() => setEditContract(false)}>
+                                        <IconPlus /> Ersten Vertrag anlegen
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Desktop Table */}
+                        {filteredContracts.length > 0 && (
+                            <div className="desktop-table">
+                                <table className="contracts-table">
+                                    <thead>
+                                        <tr>
+                                            <th onClick={() => toggleSort('name')}>
+                                                Name <SortIndicator field="name" />
+                                            </th>
+                                            <th onClick={() => toggleSort('category')}>
+                                                Kategorie <SortIndicator field="category" />
+                                            </th>
+                                            <th onClick={() => toggleSort('monthly_cost')} style={{ textAlign: 'right' }}>
+                                                Mtl. Kosten <SortIndicator field="monthly_cost" />
+                                            </th>
+                                            <th onClick={() => toggleSort('cancellation_date')}>
+                                                Kuendigung bis <SortIndicator field="cancellation_date" />
+                                            </th>
+                                            <th>Status</th>
+                                            <th style={{ width: 90 }}></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredContracts.map(c => {
+                                            const urgency = getCancelUrgency(c);
+                                            return (
+                                                <tr key={c.id}>
+                                                    <td>
+                                                        <span style={{ fontWeight: 500 }}>{c.name}</span>
+                                                        {c.auto_renew ? <span className="text-xs text-3" style={{ marginLeft: 6 }} title="Auto-Verlaengerung">&#x21bb;</span> : null}
+                                                    </td>
+                                                    <td><span className="category-badge">{c.category}</span></td>
+                                                    <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                                        <span style={{ fontWeight: 600 }}>{formatCost(c.monthly_cost)}</span>
+                                                        <span className="text-3" style={{ fontSize: 11 }}>/mtl.</span>
+                                                        {c.billing_interval && c.billing_interval !== 'monthly' && (
+                                                            <div className="text-3" style={{ fontSize: 11 }}>
+                                                                ({formatCost(c.cost)}/{c.billing_interval === 'quarterly' ? 'Quartal' : c.billing_interval === 'semi-annual' ? 'Halbjahr' : 'Jahr'})
+                                                            </div>
+                                                        )}
+                                                        {c.split_count > 1 && (
+                                                            <div className="text-3" style={{ fontSize: 11 }}>
+                                                                1/{c.split_count} = {formatCost(c.monthly_cost / c.split_count)}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        <span className={`cancel-badge ${urgency}`}>
+                                                            {getCancelLabel(c)}
+                                                        </span>
+                                                        {urgency === 'ok' && c.status === 'active' && (
+                                                            <span className="text-xs text-3" style={{ marginLeft: 6 }}>
+                                                                {formatDate(c.cancellation_date)}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        <span className={`status-badge ${c.status}`}>
+                                                            {c.status === 'active' ? 'Aktiv' : c.status === 'cancelled' ? 'Gekuendigt' : c.status}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div className="row" style={{ gap: 4, justifyContent: 'flex-end' }}>
+                                                            <button className="btn btn-ghost" title="Bearbeiten" onClick={() => setEditContract(c)}>
+                                                                <IconEdit />
+                                                            </button>
+                                                            <button className="btn btn-ghost" title="Loeschen" style={{ color: 'var(--danger)' }}
+                                                                    onClick={() => setDeleteConfirm({ id: c.id, name: c.name })}>
+                                                                <IconTrash />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* Mobile Cards */}
+                        {filteredContracts.length > 0 && (
+                            <div className="mobile-cards">
+                                {filteredContracts.map(c => {
+                                    const urgency = getCancelUrgency(c);
+                                    return (
+                                        <div key={c.id} className="contract-card">
+                                            <div className="contract-card-header">
+                                                <div>
+                                                    <div className="contract-card-name">
+                                                        {c.name}
+                                                        {c.auto_renew ? <span className="text-xs text-3" style={{ marginLeft: 6 }}>&#x21bb;</span> : null}
+                                                    </div>
+                                                    <span className="category-badge" style={{ marginTop: 4 }}>{c.category}</span>
+                                                </div>
+                                                <span className={`status-badge ${c.status}`}>
+                                                    {c.status === 'active' ? 'Aktiv' : 'Gekuendigt'}
+                                                </span>
+                                            </div>
+                                            <div className="contract-card-details">
+                                                <span>
+                                                    <strong>{formatCost(c.monthly_cost)}</strong> / Monat
+                                                    {c.billing_interval && c.billing_interval !== 'monthly' && (
+                                                        <span className="text-3" style={{ fontSize: 11, marginLeft: 4 }}>
+                                                            ({formatCost(c.cost)}/{c.billing_interval === 'quarterly' ? 'Q' : c.billing_interval === 'semi-annual' ? 'HJ' : 'J'})
+                                                        </span>
+                                                    )}
+                                                    {c.split_count > 1 && (
+                                                        <span className="text-3" style={{ fontSize: 11, marginLeft: 4 }}>
+                                                            (1/{c.split_count})
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                <span>
+                                                    Kuendigung: <span className={`cancel-badge ${urgency}`}>{getCancelLabel(c)}</span>
+                                                </span>
+                                            </div>
+                                            <div className="contract-card-actions">
+                                                <button className="btn btn-sm btn-secondary" onClick={() => setEditContract(c)}>
+                                                    <IconEdit /> Bearbeiten
+                                                </button>
+                                                <button className="btn btn-sm btn-danger" onClick={() => setDeleteConfirm({ id: c.id, name: c.name })}>
+                                                    <IconTrash />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Stats by Category */}
+                        {stats && stats.categories && stats.categories.length > 0 && (
+                            <div style={{ marginTop: 24 }}>
+                                <h3 className="fw-6 text-2" style={{ fontSize: 14, marginBottom: 12 }}>Kosten nach Kategorie</h3>
+                                <div className="card" style={{ overflow: 'hidden' }}>
+                                    {stats.categories.map((cat, i) => (
+                                        <div key={cat.category} style={{
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                            padding: '10px 16px',
+                                            borderTop: i > 0 ? '1px solid var(--border)' : 'none'
+                                        }}>
+                                            <div>
+                                                <span className="category-badge">{cat.category}</span>
+                                                <span className="text-xs text-3" style={{ marginLeft: 8 }}>{cat.count} {cat.count === 1 ? 'Vertrag' : 'Vertraege'}</span>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <span style={{ fontWeight: 600, fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{(cat.monthly_total || 0).toFixed(2)} EUR</span>
+                                                <span className="text-xs text-3" style={{ marginLeft: 4 }}>/ Monat</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                    </div>
+
+                    {/* FAB - New Contract */}
+                    <button className="fab" title="Neuer Vertrag" onClick={() => setEditContract(false)}>
+                        <IconPlus />
+                    </button>
+
+                    {/* Modals */}
+                    {editContract !== null && (
+                        <ContractForm
+                            contract={editContract || null}
+                            categories={categories}
+                            onSave={handleSaveContract}
+                            onClose={() => setEditContract(null)}
+                        />
+                    )}
+
+                    {showExport && (
+                        <ExportModal
+                            onClose={() => setShowExport(false)}
+                            showToast={showToast}
+                            onImported={loadContracts}
+                        />
+                    )}
+
+                    {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
+
+                    {deleteConfirm && (
+                        <DeleteConfirmModal
+                            message={<span><strong>"{deleteConfirm.name}"</strong> wird unwiderruflich geloescht.</span>}
+                            onConfirm={handleDeleteContract}
+                            onCancel={() => setDeleteConfirm(null)}
+                        />
+                    )}
+
+                    <Toast toasts={toasts} />
+                </div>
+            );
+        }
+
+        // ============ RENDER ============
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Vertragsmanagement />);
+    </script>
+</body>
+</html>

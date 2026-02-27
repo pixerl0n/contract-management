@@ -1,0 +1,20 @@
+node_modules/
+data/
+.env
+.env.*
+.DS_Store
+
+# Claude Code
+.claude/
+.claude.*
+CLAUDE.md
+
+# Docs / Plans
+docs/
+
+# Tests
+tests/
+*.tap
+*.junit.xml
+test-results/
+coverage/

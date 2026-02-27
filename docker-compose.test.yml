@@ -1,0 +1,19 @@
+# Test-Umgebung auf dem Server (Port 4201)
+
+services:
+  contracts:
+    image: ghcr.io/${GHCR_USERNAME}/contracts-app:test
+    container_name: contracts-app-test
+    restart: unless-stopped
+    ports:
+      - "4201:3000"
+    environment:
+      - NODE_ENV=test
+      - PORT=3000
+      - API_KEY=${API_KEY:-}
+    volumes:
+      - contracts-data:/app/data
+
+volumes:
+  contracts-data:
+    name: contracts-app-test-data

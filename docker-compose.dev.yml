@@ -1,0 +1,19 @@
+# Dev-Umgebung auf dem Server (Port 4202)
+
+services:
+  contracts:
+    image: ghcr.io/${GHCR_USERNAME}/contracts-app:dev
+    container_name: contracts-app-dev
+    restart: unless-stopped
+    ports:
+      - "4202:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - API_KEY=${API_KEY:-}
+    volumes:
+      - contracts-data:/app/data
+
+volumes:
+  contracts-data:
+    name: contracts-app-dev-data
