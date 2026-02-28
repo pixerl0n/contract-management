@@ -658,7 +658,7 @@
         }
 
         // ============ SETTINGS MODAL ============
-        function SettingsModal({ onClose, showToast, onImported, user, contracts, onAccountDeleted, showCategoryStats, onToggleCategoryStats }) {
+        function SettingsModal({ onClose, showToast, onImported, user, contracts, onAccountDeleted, showCategoryStats, onToggleCategoryStats, hideExpiredCancelled, onToggleHideExpiredCancelled }) {
             const [importing, setImporting] = useState(false);
             const [confirmDelete, setConfirmDelete] = useState(false);
             const [deleting, setDeleting] = useState(false);
@@ -753,6 +753,13 @@
                                 <label style={{ margin: 0, fontSize: 14 }}>Kosten nach Kategorie</label>
                                 <label className="toggle-switch">
                                     <input type="checkbox" checked={showCategoryStats} onChange={e => onToggleCategoryStats(e.target.checked)} />
+                                    <span className="toggle-slider" />
+                                </label>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <label style={{ margin: 0, fontSize: 14 }}>Abgelaufene Verträge ausblenden</label>
+                                <label className="toggle-switch">
+                                    <input type="checkbox" checked={hideExpiredCancelled} onChange={e => onToggleHideExpiredCancelled(e.target.checked)} />
                                     <span className="toggle-slider" />
                                 </label>
                             </div>
@@ -1124,6 +1131,7 @@
             const [showChangelog, setShowChangelog] = useState(false);
             const [deleteConfirm, setDeleteConfirm] = useState(null); // null or {id, name}
             const [showCategoryStats, setShowCategoryStats] = useState(() => localStorage.getItem('contracts_showCategoryStats') !== 'false');
+            const [hideExpiredCancelled, setHideExpiredCancelled] = useState(() => localStorage.getItem('contracts_hideExpiredCancelled') !== 'false');
             const [isOnline, setIsOnline] = useState(navigator.onLine);
             const [isLoading, setIsLoading] = useState(true);
             const [version, setVersion] = useState('');
@@ -1353,6 +1361,11 @@
             // ---- Filtering & Sorting ----
             const getFilteredContracts = () => {
                 let filtered = [...contracts];
+
+                if (hideExpiredCancelled && !filter.status) {
+                    const today = new Date().toISOString().split('T')[0];
+                    filtered = filtered.filter(c => !(c.status === 'cancelled' && c.end_date && c.end_date < today));
+                }
 
                 if (filter.search) {
                     const s = filter.search.toLowerCase();
@@ -1955,6 +1968,11 @@
                             onToggleCategoryStats={(val) => {
                                 setShowCategoryStats(val);
                                 localStorage.setItem('contracts_showCategoryStats', val);
+                            }}
+                            hideExpiredCancelled={hideExpiredCancelled}
+                            onToggleHideExpiredCancelled={(val) => {
+                                setHideExpiredCancelled(val);
+                                localStorage.setItem('contracts_hideExpiredCancelled', val);
                             }}
                         />
                     )}
