@@ -1450,7 +1450,7 @@
             const getCancelLabel = (contract) => {
                 if (contract.status !== 'active') return formatDate(contract.cancellation_date);
                 const days = getDaysUntil(contract.cancellation_date);
-                if (days < 0) return 'Abgelaufen';
+                if (days < 0) return contract.auto_renew ? 'Verlängert sich' : 'Abgelaufen';
                 if (days === 0) return 'Heute!';
                 if (days === 1) return 'Morgen!';
                 if (days <= (contract.cancel_warn_days || 90)) return `${days} Tage`;

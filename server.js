@@ -393,7 +393,7 @@ const stmts = {
 
 function createSession(userName) {
     const token = generateSessionToken();
-    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const expires = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
     stmts.setSession.run(token, expires, userName);
     return token;
 }

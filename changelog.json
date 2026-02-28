@@ -1,5 +1,14 @@
 [
     {
+        "version": "1.1.4",
+        "date": "2026-02-28",
+        "type": "patch",
+        "changes": [
+            "Session: Gueltigkeitsdauer von 30 auf 90 Tage erhoeht",
+            "Uebersicht: 'Verlaengert sich' statt 'Abgelaufen' bei aktiven Auto-Verlaengerungs-Vertraegen"
+        ]
+    },
+    {
         "version": "1.1.3",
         "date": "2026-02-28",
         "type": "patch",
