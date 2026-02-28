@@ -13,6 +13,8 @@ services:
       - API_KEY=${API_KEY:-}
     volumes:
       - contracts-data:/app/data
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
 volumes:
   contracts-data:
