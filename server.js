@@ -29,8 +29,8 @@ const CATEGORIES = [
 const BILLING_INTERVALS = {
     monthly: { factor: 1, label: 'Monatlich' },
     quarterly: { factor: 3, label: 'Quartalsweise' },
-    'semi-annual': { factor: 6, label: 'Halbjaehrlich' },
-    annual: { factor: 12, label: 'Jaehrlich' }
+    'semi-annual': { factor: 6, label: 'Halbjährlich' },
+    annual: { factor: 12, label: 'Jährlich' }
 };
 
 // ============================================================================
@@ -110,7 +110,7 @@ function rateLimit(maxAttempts = 10, windowMs = 15 * 60 * 1000) {
         if (current && current.count >= maxAttempts) {
             const retryAfter = Math.ceil((current.firstAttempt + windowMs - now) / 1000);
             res.setHeader('Retry-After', retryAfter);
-            return res.status(429).json({ error: 'Zu viele Versuche – bitte spaeter erneut versuchen' });
+            return res.status(429).json({ error: 'Zu viele Versuche – bitte später erneut versuchen' });
         }
 
         if (current) {
@@ -140,15 +140,15 @@ setInterval(() => {
 // ============================================================================
 
 function validateUser(name) {
-    if (typeof name !== 'string') return 'Benutzername ungueltig';
+    if (typeof name !== 'string') return 'Benutzername ungültig';
     const trimmed = name.trim();
     if (trimmed.length < 1 || trimmed.length > 50) return 'Benutzername: 1-50 Zeichen';
-    if (/[<>"'`;\\\/\x00-\x1f]/.test(trimmed)) return 'Benutzername enthaelt ungueltige Zeichen';
+    if (/[<>"'`;\\\/\x00-\x1f]/.test(trimmed)) return 'Benutzername enthält ungültige Zeichen';
     return null;
 }
 
 function validatePassword(pw) {
-    if (typeof pw !== 'string') return 'Passwort ungueltig';
+    if (typeof pw !== 'string') return 'Passwort ungültig';
     if (pw.length < 4) return 'Passwort: mindestens 4 Zeichen';
     if (pw.length > 128) return 'Passwort: maximal 128 Zeichen';
     return null;
@@ -188,17 +188,17 @@ function validateContract(body) {
     if (!name || typeof name !== 'string' || name.trim().length < 1 || name.trim().length > 200)
         return 'Name: 1-200 Zeichen';
     if (!category || !CATEGORIES.includes(category))
-        return 'Ungueltige Kategorie';
+        return 'Ungültige Kategorie';
     if (!start_date || !/^\d{4}-\d{2}-\d{2}$/.test(start_date) || isNaN(Date.parse(start_date)))
-        return 'Ungueltiges Startdatum (YYYY-MM-DD)';
+        return 'Ungültiges Startdatum (YYYY-MM-DD)';
     if (!Number.isInteger(duration_months) || duration_months < 1 || duration_months > 600)
         return 'Laufzeit: 1-600 Monate';
     if (!Number.isInteger(cancellation_period_months) || cancellation_period_months < 0 || cancellation_period_months > 24)
-        return 'Kuendigungsfrist: 0-24 Monate';
+        return 'Kündigungsfrist: 0-24 Monate';
     if (typeof cost !== 'number' || !Number.isFinite(cost) || cost < 0 || cost > 99999)
         return 'Kosten: 0-99999 EUR';
     if (billing_interval !== undefined && billing_interval !== null && !BILLING_INTERVALS[billing_interval])
-        return 'Ungueltiges Zahlungsintervall';
+        return 'Ungültiges Zahlungsintervall';
     if (cashback !== undefined && cashback !== null && (typeof cashback !== 'string' || cashback.length > 200))
         return 'Cashback: maximal 200 Zeichen';
     if (description !== undefined && description !== null && (typeof description !== 'string' || description.length > 2000))
@@ -210,10 +210,10 @@ function validateContract(body) {
     if (body.split_count !== undefined && (!Number.isInteger(body.split_count) || body.split_count < 1 || body.split_count > 20))
         return 'Geteilt mit: 1-20 Personen';
     if (body.cancel_warn_days !== undefined && body.cancel_warn_days !== null && (!Number.isInteger(body.cancel_warn_days) || body.cancel_warn_days < 1 || body.cancel_warn_days > 365))
-        return 'Kuendigungswarnung: 1-365 Tage';
+        return 'Kündigungswarnung: 1-365 Tage';
     if (body.cancelled_at !== undefined && body.cancelled_at !== null &&
         (typeof body.cancelled_at !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.cancelled_at) || isNaN(Date.parse(body.cancelled_at))))
-        return 'Kuendigungsdatum: ungueltiges Format (YYYY-MM-DD)';
+        return 'Kündigungsdatum: ungültiges Format (YYYY-MM-DD)';
     if (body.customer_number !== undefined && body.customer_number !== null &&
         (typeof body.customer_number !== 'string' || body.customer_number.length > 100))
         return 'Kundennummer: maximal 100 Zeichen';
@@ -586,7 +586,7 @@ app.delete('/api/users/:user', validateApiKey, validateSession, (req, res) => {
         res.json({ success: true, user: req.params.user });
     } catch (error) {
         console.error('Delete user error:', error.message);
-        res.status(500).json({ error: 'Fehler beim Loeschen' });
+        res.status(500).json({ error: 'Fehler beim Löschen' });
     }
 });
 
@@ -766,7 +766,7 @@ app.delete('/api/contracts/:id', validateApiKey, validateSession, (req, res) => 
         res.json({ success: true, deleted: result.changes });
     } catch (error) {
         console.error('Delete contract error:', error.message);
-        res.status(500).json({ error: 'Fehler beim Loeschen' });
+        res.status(500).json({ error: 'Fehler beim Löschen' });
     }
 });
 
@@ -788,12 +788,12 @@ app.get('/api/export/json', validateApiKey, validateSession, (req, res) => {
     }
 });
 
-// CSV Export (Excel-kompatibel, BOM fuer Umlaute)
+// CSV Export (Excel-kompatibel, BOM für Umlaute)
 app.get('/api/export/csv', validateApiKey, validateSession, (req, res) => {
     try {
         const rows = stmts.exportContracts.all(req.sessionUserId);
         const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const header = 'Name;Kategorie;Startdatum;Laufzeit (Monate);Kuendigungsfrist (Monate);Kuendigungsdatum;Enddatum;Kosten;Zahlungsintervall;Monatliche Kosten;Cashback;Geteilt mit;Beschreibung;Status;Auto-Verlaengerung;Kuendigungswarnung;Warnzeitraum (Tage);Gekuendigt am;Kuendigung bestaetigt;Kundennummer;Vertragsnummer;Notizen\n';
+        const header = 'Name;Kategorie;Startdatum;Laufzeit (Monate);Kündigungsfrist (Monate);Kündigungsdatum;Enddatum;Kosten;Zahlungsintervall;Monatliche Kosten;Cashback;Geteilt mit;Beschreibung;Status;Auto-Verlängerung;Kündigungswarnung;Warnzeitraum (Tage);Gekündigt am;Kündigung bestätigt;Kundennummer;Vertragsnummer;Notizen\n';
         const body = rows.map(r =>
             [esc(r.name), esc(r.category), r.start_date, r.duration_months,
              r.cancellation_period_months, r.cancellation_date, r.end_date,
@@ -885,7 +885,7 @@ app.post('/api/import/json', validateApiKey, validateSession, (req, res) => {
             return res.status(400).json({ error: 'data muss ein Array sein' });
         }
         if (data.length === 0) return res.status(400).json({ error: 'Keine Daten zum Importieren' });
-        if (data.length > 1000) return res.status(400).json({ error: 'Maximal 1.000 Vertraege' });
+        if (data.length > 1000) return res.status(400).json({ error: 'Maximal 1.000 Verträge' });
 
         const count = importContracts(req.sessionUserId, data);
         res.json({ success: true, imported: count });
@@ -909,7 +909,7 @@ app.use((err, _req, res, _next) => {
 // ============================================================================
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Vertragsmanagement laeuft auf http://0.0.0.0:${PORT}`);
+    console.log(`🚀 Vertragsmanagement läuft auf http://0.0.0.0:${PORT}`);
 });
 
 process.on('SIGTERM', () => {

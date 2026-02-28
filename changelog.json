@@ -1,12 +1,23 @@
 [
     {
+        "version": "1.1.3",
+        "date": "2026-02-28",
+        "type": "patch",
+        "changes": [
+            "Einstellungen: Export/Import und Account-Verwaltung in einem Modal zusammengefasst",
+            "Navigation: Zahnrad-Icon statt separater Buttons für Export und Account-Löschen",
+            "Favicon: Neues Dokument-Icon mit Umgebungsfarben statt Buchstaben",
+            "UI-Texte: Deutsche Umlaute (ä, ö, ü, ß) in allen Dateien"
+        ]
+    },
+    {
         "version": "1.1.2",
         "date": "2026-02-28",
         "type": "patch",
         "changes": [
             "Vertragsnummer: Optionales Feld pro Vertrag (max 100 Zeichen)",
             "Suche: Vertragsnummer wird jetzt durchsucht",
-            "Uebersicht: Auto-Verlaengerung-Symbol bei gekuendigten Vertraegen ausgeblendet"
+            "Übersicht: Auto-Verlängerung-Symbol bei gekündigten Verträgen ausgeblendet"
         ]
     },
     {
@@ -14,7 +25,7 @@
         "date": "2026-02-28",
         "type": "patch",
         "changes": [
-            "Kuendigungstracking: Datum und Bestaetigung bei gekuendigten Vertraegen erfassen",
+            "Kündigungstracking: Datum und Bestätigung bei gekündigten Verträgen erfassen",
             "Kundennummer: Optionales Feld pro Vertrag (max 100 Zeichen)",
             "Suche: Kategorie und Kundennummer werden jetzt durchsucht",
             "Formular: Textfelder (Cashback, Beschreibung, Notizen) wachsen automatisch mit dem Inhalt"
@@ -25,17 +36,17 @@
         "date": "2026-02-27",
         "type": "minor",
         "changes": [
-            "Zahlungsintervall: Monatlich, Quartalsweise, Halbjaehrlich, Jaehrlich",
+            "Zahlungsintervall: Monatlich, Quartalsweise, Halbjährlich, Jährlich",
             "Automatische Berechnung der monatlichen Kosten aus Betrag und Intervall",
             "Cashback-Feld (Freitext) zur Erfassung von Cashback-Informationen",
-            "Kuendigungswarnung pro Vertrag aktivierbar/deaktivierbar",
-            "Kostenaufteilung: Vertraege mit mehreren Personen teilen",
+            "Kündigungswarnung pro Vertrag aktivierbar/deaktivierbar",
+            "Kostenaufteilung: Verträge mit mehreren Personen teilen",
             "Dashboard zeigt Gesamtkosten und eigenen Anteil separat an",
             "Neuer API-Endpoint: GET /api/billing-intervals",
             "CSV/JSON-Export mit neuen Feldern (Intervall, Cashback, Geteilt, Warnung)",
-            "Abwaertskompatibilitaet beim JSON-Import (monthly_cost wird als cost akzeptiert)",
-            "Security: Content-Security-Policy Header hinzugefuegt",
-            "Security: SRI-Hashes fuer CDN-Scripts (React, ReactDOM, Babel)",
+            "Abwärtskompatibilität beim JSON-Import (monthly_cost wird als cost akzeptiert)",
+            "Security: Content-Security-Policy Header hinzugefügt",
+            "Security: SRI-Hashes für CDN-Scripts (React, ReactDOM, Babel)",
             "Security: Template-Injection-Schutz bei API-Key/NODE_ENV Injection",
             "Security: Globaler Error-Handler ohne interne Details",
             "Security: Validierung von description, notes, status, cost (NaN-Schutz)",
@@ -47,13 +58,13 @@
         "date": "2026-02-27",
         "type": "major",
         "changes": [
-            "Vertragserfassung mit Name, Kategorie, Laufzeit, Kuendigungsfrist, Kosten",
-            "Automatische Berechnung von Kuendigungs- und Enddatum",
+            "Vertragserfassung mit Name, Kategorie, Laufzeit, Kündigungsfrist, Kosten",
+            "Automatische Berechnung von Kündigungs- und Enddatum",
             "Multi-User mit Passwort-Authentifizierung und Session-Tokens",
-            "Filter nach Kategorie, Status und Sortierung nach Name, Kosten, Kuendigungsdatum",
+            "Filter nach Kategorie, Status und Sortierung nach Name, Kosten, Kündigungsdatum",
             "Suche nach Vertragsname oder Anbieter",
-            "Kuendigungswarnung: Rot (<30 Tage), Gelb (<90 Tage), Gruen (>90 Tage)",
-            "Kosten-Uebersicht pro Monat und Jahr, aufgeschluesselt nach Kategorie",
+            "Kündigungswarnung: Rot (<30 Tage), Gelb (<90 Tage), Grün (>90 Tage)",
+            "Kosten-Übersicht pro Monat und Jahr, aufgeschlüsselt nach Kategorie",
             "CSV- und JSON-Export/Import",
             "Responsive Design mit Dark/Light Mode",
             "Docker-Support mit Multi-Environment Setup"

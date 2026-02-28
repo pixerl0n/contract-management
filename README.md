@@ -1,12 +1,12 @@
 # Vertragsmanagement
 
-Persoenliches Vertragsmanagement. Node.js + better-sqlite3 Backend, React 18 Frontend (kein Build-Step). Deutsche UI.
+Persönliches Vertragsmanagement. Node.js + better-sqlite3 Backend, React 18 Frontend (kein Build-Step). Deutsche UI.
 
-> **Datenpersistenz:** Die Datenbank liegt in einem Named Volume (`contracts-app-{env}-data`). Erst ein explizites `docker volume rm` loescht die Daten unwiderruflich!
+> **Datenpersistenz:** Die Datenbank liegt in einem Named Volume (`contracts-app-{env}-data`). Erst ein explizites `docker volume rm` löscht die Daten unwiderruflich!
 
 ---
 
-## Uebersicht
+## Übersicht
 
 | Umgebung  | Port | `NODE_ENV`  | Docker Tag | Branch | Volume |
 |-----------|------|-------------|------------|--------|--------|
@@ -21,18 +21,18 @@ Interner Container-Port ist immer `3000`.
 
 ## Features (v1.1)
 
-- Vertragserfassung mit Name, Kategorie, Laufzeit, Kuendigungsfrist, Kosten
-- Zahlungsintervall: Monatlich, Quartalsweise, Halbjaehrlich, Jaehrlich
+- Vertragserfassung mit Name, Kategorie, Laufzeit, Kündigungsfrist, Kosten
+- Zahlungsintervall: Monatlich, Quartalsweise, Halbjährlich, Jährlich
 - Automatische Berechnung der monatlichen Kosten aus Betrag und Intervall
-- Kostenaufteilung: Vertraege mit mehreren Personen teilen
+- Kostenaufteilung: Verträge mit mehreren Personen teilen
 - Dashboard zeigt Gesamtkosten und eigenen Anteil separat an
 - Cashback-Feld (Freitext) zur Erfassung von Cashback-Informationen
-- Kuendigungswarnung pro Vertrag aktivierbar/deaktivierbar
+- Kündigungswarnung pro Vertrag aktivierbar/deaktivierbar
 - Multi-User mit Passwort-Authentifizierung und Session-Tokens
-- Filter nach Kategorie, Status und Sortierung nach Name, Kosten, Kuendigungsdatum
+- Filter nach Kategorie, Status und Sortierung nach Name, Kosten, Kündigungsdatum
 - Suche nach Vertragsname oder Anbieter
-- Kuendigungswarnung: Rot (<30 Tage), Gelb (<90 Tage), Gruen (>90 Tage)
-- Kosten-Uebersicht pro Monat und Jahr, aufgeschluesselt nach Kategorie
+- Kündigungswarnung: Rot (<30 Tage), Gelb (<90 Tage), Grün (>90 Tage)
+- Kosten-Übersicht pro Monat und Jahr, aufgeschlüsselt nach Kategorie
 - CSV- und JSON-Export/Import
 - Responsive Design mit Dark/Light Mode
 
@@ -46,7 +46,7 @@ Interner Container-Port ist immer `3000`.
 docker compose -p contracts-dev-local -f docker-compose.dev.local.yml up -d --build
 ```
 
-Baut das Image lokal und mounted `server.js` + `public/` als Volumes. Aenderungen an diesen Dateien sind sofort sichtbar (Container-Neustart bei `server.js`-Aenderungen noetig).
+Baut das Image lokal und mounted `server.js` + `public/` als Volumes. Änderungen an diesen Dateien sind sofort sichtbar (Container-Neustart bei `server.js`-Änderungen nötig).
 
 ### Logs & API-Key anzeigen
 
@@ -60,14 +60,14 @@ docker logs -f contracts-app-dev-local
 docker compose -p contracts-dev-local -f docker-compose.dev.local.yml down
 ```
 
-### Komplett aufraeumen (inkl. Datenbank)
+### Komplett aufräumen (inkl. Datenbank)
 
 ```bash
 docker compose -p contracts-dev-local -f docker-compose.dev.local.yml down
 docker volume rm contracts-app-dev-local-data
 ```
 
-### App oeffnen
+### App öffnen
 
 http://localhost:4210
 
@@ -109,7 +109,7 @@ openssl rand -hex 32
 # .env erstellen
 cat > .env << 'EOF'
 GHCR_USERNAME=dein-github-username
-API_KEY=<hier-den-generierten-key-einfuegen>
+API_KEY=<hier-den-generierten-key-einfügen>
 EOF
 ```
 
@@ -145,7 +145,7 @@ docker compose --env-file .env -p contracts-test -f docker-compose.test.yml up -
 docker compose --env-file .env -p contracts-dev -f docker-compose.dev.yml up -d --pull always
 ```
 
-### Pruefen
+### Prüfen
 
 ```bash
 docker ps -f name=contracts-app
@@ -170,7 +170,7 @@ docker compose --env-file .env -p contracts-test -f docker-compose.test.yml down
 docker compose --env-file .env -p contracts-dev -f docker-compose.dev.yml down
 ```
 
-> `down -v` loescht auch das Volume — **Datenbank wird unwiderruflich geloescht!**
+> `down -v` löscht auch das Volume — **Datenbank wird unwiderruflich gelöscht!**
 
 ---
 
@@ -178,7 +178,7 @@ docker compose --env-file .env -p contracts-dev -f docker-compose.dev.yml down
 
 1. Code auf den Branch pushen (`dev`, `test` oder `main`)
 2. GitHub Actions baut automatisch das neue Docker Image
-3. Auf dem Server den Befehl der jeweiligen Umgebung nochmal ausfuehren
+3. Auf dem Server den Befehl der jeweiligen Umgebung nochmal ausführen
 
 ```bash
 # Beispiel: PROD updaten
@@ -206,7 +206,7 @@ git push origin dev
 # Zum Testen
 git checkout test && git merge dev && git push origin test
 
-# Fuer Produktion
+# Für Produktion
 git checkout main && git merge test && git push origin main
 ```
 
@@ -220,7 +220,7 @@ Die Workflow-Datei liegt unter `.github/workflows/docker.yml`.
 
 ### Authentifizierung
 
-Der Workflow nutzt **`GITHUB_TOKEN`** (automatisch von GitHub bereitgestellt) — kein separater PAT noetig.
+Der Workflow nutzt **`GITHUB_TOKEN`** (automatisch von GitHub bereitgestellt) — kein separater PAT nötig.
 
 ### Branch → Tag Mapping
 
@@ -240,20 +240,20 @@ Der Workflow nutzt **`GITHUB_TOKEN`** (automatisch von GitHub bereitgestellt) �
 
 ## 8. API-Key Sicherheit
 
-Alle Daten-Endpoints sind mit einem API-Key geschuetzt. Der Key wird bei jedem Request als `x-api-key` Header mitgeschickt.
+Alle Daten-Endpoints sind mit einem API-Key geschützt. Der Key wird bei jedem Request als `x-api-key` Header mitgeschickt.
 
-**Offene Endpoints** (kein Key noetig): `/`, `/api/health`, `/api/version`, `/api/changelog`, `/api/categories`, `/api/billing-intervals`
+**Offene Endpoints** (kein Key nötig): `/`, `/api/health`, `/api/version`, `/api/changelog`, `/api/categories`, `/api/billing-intervals`
 
 | Verhalten | Details |
 |-----------|---------|
 | Key per Env-Variable | `API_KEY=...` in `.env` setzen |
-| Kein Key gesetzt | Wird beim Start zufaellig generiert (in dev in den Logs sichtbar) |
+| Kein Key gesetzt | Wird beim Start zufällig generiert (in dev in den Logs sichtbar) |
 | Frontend | Key wird automatisch vom Server ins HTML injiziert |
-| POST/PUT/DELETE | Zusaetzlich Origin/Referer-Check |
+| POST/PUT/DELETE | Zusätzlich Origin/Referer-Check |
 
 ---
 
-## 9. Passwort zuruecksetzen
+## 9. Passwort zurücksetzen
 
 ```bash
 docker exec -it contracts-app-prod sh -c "
@@ -261,11 +261,11 @@ docker exec -it contracts-app-prod sh -c "
 "
 ```
 
-> Nach dem Reset wird die aktive Session ungueltig. Der Benutzer muss sich neu anmelden und ein neues Passwort vergeben.
+> Nach dem Reset wird die aktive Session ungültig. Der Benutzer muss sich neu anmelden und ein neues Passwort vergeben.
 
 ---
 
-## 10. Nuetzliche Befehle
+## 10. Nützliche Befehle
 
 ```bash
 # Container-Status aller Umgebungen

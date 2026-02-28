@@ -482,14 +482,21 @@
 
         // ============ DYNAMIC FAVICON ============
         const ENV_CONFIG = {
-            development: { label: 'DEV', color: '#007aff', letter: 'D' },
-            test:        { label: 'TEST', color: '#ff9f0a', letter: 'T' },
-            production:  { label: 'PROD', color: '#34c759', letter: 'P' }
+            development: { label: 'DEV', color: '#007aff' },
+            test:        { label: 'TEST', color: '#ff9f0a' },
+            production:  { label: 'PROD', color: '#34c759' }
         };
 
         (function setFavicon() {
             const env = ENV_CONFIG[NODE_ENV] || ENV_CONFIG.development;
-            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${env.color}"/><text x="16" y="23" text-anchor="middle" font-size="20" font-weight="700" fill="#fff" font-family="system-ui">${env.letter}</text></svg>`;
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <rect width="32" height="32" rx="8" fill="${env.color}"/>
+                <path d="M9 6h9l6 6v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="rgba(255,255,255,0.9)"/>
+                <path d="M18 6v6h6" fill="rgba(255,255,255,0.7)" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+                <line x1="10" y1="16" x2="20" y2="16" stroke="${env.color}" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="10" y1="19.5" x2="18" y2="19.5" stroke="${env.color}" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="10" y1="23" x2="16" y2="23" stroke="${env.color}" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>`;
             document.getElementById('favicon').href = 'data:image/svg+xml,' + encodeURIComponent(svg);
             if (NODE_ENV !== 'production') {
                 document.title = `[${env.label}] Vertragsmanagement`;
@@ -557,6 +564,7 @@
         const IconAlertTriangle = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
         const IconUser = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
         const IconLock = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>;
+        const IconSettings = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
         const IconBack = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
         const IconEye = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
         const IconEyeOff = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
@@ -584,7 +592,7 @@
         // ============ OFFLINE BANNER ============
         function OfflineBanner({ visible }) {
             if (!visible) return null;
-            return <div className="offline-banner">Keine Verbindung -- Aenderungen werden nicht gespeichert</div>;
+            return <div className="offline-banner">Keine Verbindung -- Änderungen werden nicht gespeichert</div>;
         }
 
         // ============ CHANGELOG MODAL ============
@@ -606,7 +614,7 @@
                         <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 16 }}>Changelog</h3>
                         <div className="gap-4" style={{ maxHeight: '60dvh', overflowY: 'auto' }}>
                             {loading ? (
-                                <p className="text-2" style={{ padding: '24px 0', textAlign: 'center' }}>Laedt...</p>
+                                <p className="text-2" style={{ padding: '24px 0', textAlign: 'center' }}>Lädt...</p>
                             ) : (
                                 changelog.map(entry => (
                                     <div key={entry.version} className="changelog-version-block">
@@ -624,7 +632,7 @@
                                 ))
                             )}
                         </div>
-                        <button className="btn btn-secondary btn-full mt-4" onClick={onClose}>Schliessen</button>
+                        <button className="btn btn-secondary btn-full mt-4" onClick={onClose}>Schließen</button>
                     </div>
                 </div>
             );
@@ -636,22 +644,24 @@
                 <div className="modal-overlay" onClick={onCancel}>
                     <div className="modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-handle" />
-                        <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 8 }}>Wirklich loeschen?</h3>
+                        <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 8 }}>Wirklich löschen?</h3>
                         <p className="text-sm text-2" style={{ marginBottom: 20, lineHeight: 1.5 }}>
                             {message}
                         </p>
                         <div className="row" style={{ gap: 10 }}>
                             <button className="btn btn-secondary btn-full" onClick={onCancel}>Abbrechen</button>
-                            <button className="btn btn-danger btn-full" onClick={onConfirm}>Loeschen</button>
+                            <button className="btn btn-danger btn-full" onClick={onConfirm}>Löschen</button>
                         </div>
                     </div>
                 </div>
             );
         }
 
-        // ============ EXPORT MODAL ============
-        function ExportModal({ onClose, showToast, onImported }) {
+        // ============ SETTINGS MODAL ============
+        function SettingsModal({ onClose, showToast, onImported, user, contracts, onAccountDeleted, showCategoryStats, onToggleCategoryStats }) {
             const [importing, setImporting] = useState(false);
+            const [confirmDelete, setConfirmDelete] = useState(false);
+            const [deleting, setDeleting] = useState(false);
             const fileRef = useRef(null);
 
             function download(format) {
@@ -668,26 +678,40 @@
 
             async function handleImport() {
                 const file = fileRef.current?.files?.[0];
-                if (!file) return showToast('Bitte eine JSON-Datei auswaehlen', 'error');
+                if (!file) return showToast('Bitte eine JSON-Datei auswählen', 'error');
                 setImporting(true);
                 try {
                     const text = await file.text();
                     const data = JSON.parse(text);
                     if (!Array.isArray(data)) {
-                        throw new Error('Datei muss ein Array von Vertraegen enthalten');
+                        throw new Error('Datei muss ein Array von Verträgen enthalten');
                     }
                     const r = await apiCall(`${API_BASE}/api/import/json`, {
                         method: 'POST',
                         body: JSON.stringify({ data })
                     });
                     const result = await r.json();
-                    showToast(`${result.imported} Vertraege importiert`);
+                    showToast(`${result.imported} Verträge importiert`);
                     onImported();
                     onClose();
                 } catch (err) {
                     showToast(err.message || 'Import fehlgeschlagen', 'error');
                 } finally {
                     setImporting(false);
+                }
+            }
+
+            async function handleDeleteAccount() {
+                setDeleting(true);
+                try {
+                    await apiCall(`${API_BASE}/api/users/${encodeURIComponent(user)}`, { method: 'DELETE' });
+                    showToast('Account gelöscht');
+                    onAccountDeleted();
+                } catch (e) {
+                    showToast(e.message || 'Fehler beim Löschen', 'error');
+                    setConfirmDelete(false);
+                } finally {
+                    setDeleting(false);
                 }
             }
 
@@ -704,7 +728,7 @@
                                 Als CSV exportieren (Excel-kompatibel)
                             </button>
                             <p className="text-xs text-3" style={{ textAlign: 'center' }}>
-                                Alle Vertraege werden heruntergeladen.
+                                Alle Verträge werden heruntergeladen.
                             </p>
                         </div>
 
@@ -721,8 +745,44 @@
                             </p>
                         </div>
 
+                        <div className="divider" />
+
+                        <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 16 }}>Anzeige</h3>
+                        <div className="gap-3">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <label style={{ margin: 0, fontSize: 14 }}>Kosten nach Kategorie</label>
+                                <label className="toggle-switch">
+                                    <input type="checkbox" checked={showCategoryStats} onChange={e => onToggleCategoryStats(e.target.checked)} />
+                                    <span className="toggle-slider" />
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="divider" />
+
+                        <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 16 }}>Account</h3>
+                        <div className="gap-3">
+                            {!confirmDelete ? (
+                                <button className="btn btn-danger btn-full" onClick={() => setConfirmDelete(true)}>
+                                    Account löschen
+                                </button>
+                            ) : (
+                                <>
+                                    <p className="text-sm text-2" style={{ lineHeight: 1.5 }}>
+                                        Dein Account <strong>"{user}"</strong> und alle {contracts.length} Verträge werden unwiderruflich gelöscht.
+                                    </p>
+                                    <div className="row" style={{ gap: 10 }}>
+                                        <button className="btn btn-secondary btn-full" onClick={() => setConfirmDelete(false)}>Abbrechen</button>
+                                        <button className="btn btn-danger btn-full" onClick={handleDeleteAccount} disabled={deleting}>
+                                            {deleting ? 'Lösche...' : 'Endgültig löschen'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
                         <div style={{ marginTop: 16 }}>
-                            <button className="btn btn-ghost btn-full" onClick={onClose}>Schliessen</button>
+                            <button className="btn btn-ghost btn-full" onClick={onClose}>Schließen</button>
                         </div>
                     </div>
                 </div>
@@ -876,7 +936,7 @@
 
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Kuendigungsfrist (Monate)</label>
+                                    <label>Kündigungsfrist (Monate)</label>
                                     <input type="number" value={form.cancellation_period_months} onChange={e => handleChange('cancellation_period_months', e.target.value)}
                                            min="0" max="24" />
                                 </div>
@@ -892,8 +952,8 @@
                                 <select value={form.billing_interval} onChange={e => handleChange('billing_interval', e.target.value)}>
                                     <option value="monthly">Monatlich</option>
                                     <option value="quarterly">Quartalsweise</option>
-                                    <option value="semi-annual">Halbjaehrlich</option>
-                                    <option value="annual">Jaehrlich</option>
+                                    <option value="semi-annual">Halbjährlich</option>
+                                    <option value="annual">Jährlich</option>
                                 </select>
                             </div>
 
@@ -940,7 +1000,7 @@
 
                             <div className="form-group">
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <label style={{ margin: 0 }}>Auto-Verlaengerung</label>
+                                    <label style={{ margin: 0 }}>Auto-Verlängerung</label>
                                     <label className="toggle-switch">
                                         <input type="checkbox" checked={form.auto_renew}
                                                onChange={e => handleChange('auto_renew', e.target.checked)} />
@@ -951,7 +1011,7 @@
 
                             <div className="form-group">
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <label style={{ margin: 0 }}>Kuendigungswarnung</label>
+                                    <label style={{ margin: 0 }}>Kündigungswarnung</label>
                                     <label className="toggle-switch">
                                         <input type="checkbox" checked={form.notify}
                                                onChange={e => handleChange('notify', e.target.checked)} />
@@ -973,20 +1033,20 @@
                                 <label>Status</label>
                                 <select value={form.status} onChange={e => handleChange('status', e.target.value)}>
                                     <option value="active">Aktiv</option>
-                                    <option value="cancelled">Gekuendigt</option>
+                                    <option value="cancelled">Gekündigt</option>
                                 </select>
                             </div>
 
                             {form.status === 'cancelled' && (
                                 <>
                                     <div className="form-group">
-                                        <label>Gekuendigt am</label>
+                                        <label>Gekündigt am</label>
                                         <input type="date" value={form.cancelled_at}
                                                onChange={e => handleChange('cancelled_at', e.target.value)} />
                                     </div>
                                     <div className="form-group">
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <label style={{ margin: 0 }}>Kuendigung bestaetigt</label>
+                                            <label style={{ margin: 0 }}>Kündigung bestätigt</label>
                                             <label className="toggle-switch">
                                                 <input type="checkbox" checked={form.cancellation_confirmed}
                                                        onChange={e => handleChange('cancellation_confirmed', e.target.checked)} />
@@ -1007,7 +1067,7 @@
                                         <span className="preview-value">{previewDates.end_date}</span>
                                     </div>
                                     <div className="preview-row">
-                                        <span className="preview-label">Kuendigungsdatum</span>
+                                        <span className="preview-label">Kündigungsdatum</span>
                                         <span className="preview-value">{previewDates.cancellation_date}</span>
                                     </div>
                                     {parseFloat(form.cost) > 0 && form.billing_interval && form.billing_interval !== 'monthly' && (
@@ -1018,7 +1078,7 @@
                                     )}
                                     {parseFloat(form.cost) > 0 && (
                                         <div className="preview-row" style={{ marginTop: form.billing_interval === 'monthly' ? 4 : 0, borderTop: form.billing_interval === 'monthly' ? '1px solid var(--border)' : 'none', paddingTop: form.billing_interval === 'monthly' ? 4 : 0 }}>
-                                            <span className="preview-label">Jaehrliche Kosten</span>
+                                            <span className="preview-label">Jährliche Kosten</span>
                                             <span className="preview-value">{(parseFloat(form.cost) / ({monthly:1,quarterly:3,'semi-annual':6,annual:12}[form.billing_interval] || 1) * 12).toFixed(2)} EUR</span>
                                         </div>
                                     )}
@@ -1060,10 +1120,10 @@
 
             // UI state
             const [editContract, setEditContract] = useState(null); // null=closed, false=new, object=edit
-            const [showExport, setShowExport] = useState(false);
+            const [showSettings, setShowSettings] = useState(false);
             const [showChangelog, setShowChangelog] = useState(false);
             const [deleteConfirm, setDeleteConfirm] = useState(null); // null or {id, name}
-            const [deleteUserConfirm, setDeleteUserConfirm] = useState(false);
+            const [showCategoryStats, setShowCategoryStats] = useState(() => localStorage.getItem('contracts_showCategoryStats') !== 'false');
             const [isOnline, setIsOnline] = useState(navigator.onLine);
             const [isLoading, setIsLoading] = useState(true);
             const [version, setVersion] = useState('');
@@ -1137,7 +1197,7 @@
                     setContracts(contractsData);
                     setStats(statsData);
                 } catch (e) {
-                    showToast('Fehler beim Laden der Vertraege', 'error');
+                    showToast('Fehler beim Laden der Verträge', 'error');
                 }
             };
 
@@ -1251,29 +1311,6 @@
                 loadUsers();
             };
 
-            const handleDeleteUser = async () => {
-                try {
-                    await apiCall(`${API_BASE}/api/users/${encodeURIComponent(user)}`, {
-                        method: 'DELETE'
-                    });
-                    showToast('Account geloescht');
-                    localStorage.removeItem('contracts_session');
-                    localStorage.removeItem('contracts_user');
-                    setUser('');
-                    setUserId(null);
-                    setContracts([]);
-                    setStats(null);
-                    setView('login');
-                    setPasswordMode(null);
-                    setSelectedUser('');
-                    setDeleteUserConfirm(false);
-                    loadUsers();
-                } catch (e) {
-                    showToast(e.message || 'Fehler beim Loeschen', 'error');
-                    setDeleteUserConfirm(false);
-                }
-            };
-
             // ---- Contract handlers ----
             const handleSaveContract = async (formData) => {
                 try {
@@ -1305,11 +1342,11 @@
                     await apiCall(`${API_BASE}/api/contracts/${deleteConfirm.id}`, {
                         method: 'DELETE'
                     });
-                    showToast(`"${deleteConfirm.name}" geloescht`);
+                    showToast(`"${deleteConfirm.name}" gelöscht`);
                     setDeleteConfirm(null);
                     loadContracts();
                 } catch (e) {
-                    showToast(e.message || 'Fehler beim Loeschen', 'error');
+                    showToast(e.message || 'Fehler beim Löschen', 'error');
                 }
             };
 
@@ -1446,14 +1483,14 @@
 
                 const title = passwordMode === 'login' ? 'Anmelden' :
                               passwordMode === 'set-password' ? 'Passwort erstellen' : 'Neuer Benutzer';
-                const subtitle = passwordMode === 'login' ? `Passwort fuer ${selectedUser}` :
-                                 passwordMode === 'set-password' ? `Erstelle ein Passwort fuer ${selectedUser}` :
-                                 `Passwort fuer ${selectedUser} festlegen`;
+                const subtitle = passwordMode === 'login' ? `Passwort für ${selectedUser}` :
+                                 passwordMode === 'set-password' ? `Erstelle ein Passwort für ${selectedUser}` :
+                                 `Passwort für ${selectedUser} festlegen`;
 
                 const submit = async () => {
                     if (!pw) return showToast('Bitte Passwort eingeben', 'error');
                     if (pw.length < 4) return showToast('Passwort: mindestens 4 Zeichen', 'error');
-                    if (needsConfirm && pw !== pw2) return showToast('Passwoerter stimmen nicht ueberein', 'error');
+                    if (needsConfirm && pw !== pw2) return showToast('Passwörter stimmen nicht überein', 'error');
                     setBusy(true);
                     if (passwordMode === 'login') await handleLogin(pw);
                     else if (passwordMode === 'set-password') await handleSetPassword(pw);
@@ -1465,7 +1502,7 @@
                     <div className="gap-3">
                         <div>
                             <button className="btn btn-ghost" onClick={handlePasswordBack} style={{ marginBottom: 8, marginLeft: -8, color: 'var(--accent)', gap: 4, borderRadius: 'var(--r-sm)', fontSize: 14 }}>
-                                <IconBack /> Zurueck
+                                <IconBack /> Zurück
                             </button>
                             <div className="row" style={{ gap: 10, marginBottom: 4 }}>
                                 <IconLock />
@@ -1495,7 +1532,7 @@
             if (isLoading) return (
                 <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <OfflineBanner visible={!isOnline} />
-                    <p className="text-2" style={{ fontSize: 16, fontWeight: 500 }}>Laedt...</p>
+                    <p className="text-2" style={{ fontSize: 16, fontWeight: 500 }}>Lädt...</p>
                     <Toast toasts={toasts} />
                 </div>
             );
@@ -1591,12 +1628,8 @@
                                 <button className="btn btn-ghost" title={themeTitle} onClick={toggleTheme}>
                                     <ThemeIcon />
                                 </button>
-                                <button className="btn btn-ghost" title="Export / Import" onClick={() => setShowExport(true)}>
-                                    <IconDownload />
-                                </button>
-                                <button className="btn btn-ghost" title="Account loeschen" style={{ color: 'var(--danger)' }}
-                                        onClick={() => setDeleteUserConfirm(true)}>
-                                    <IconTrash />
+                                <button className="btn btn-ghost" title="Einstellungen" onClick={() => setShowSettings(true)}>
+                                    <IconSettings />
                                 </button>
                                 <button className="btn btn-ghost" title="Abmelden" onClick={handleLogout}>
                                     <IconLogout />
@@ -1624,7 +1657,7 @@
                                 </div>
                                 <div className="stat-card">
                                     <div className="stat-value" style={{ color: 'var(--success)' }}>{activeCount}</div>
-                                    <div className="stat-label">Aktive Vertraege</div>
+                                    <div className="stat-label">Aktive Verträge</div>
                                 </div>
                             </div>
                         )}
@@ -1632,7 +1665,7 @@
                         {/* Urgent Contracts Warning */}
                         {urgentContracts.length > 0 && (
                             <div className="urgent-section">
-                                <h3><IconAlertTriangle /> Kuendigungsfristen beachten!</h3>
+                                <h3><IconAlertTriangle /> Kündigungsfristen beachten!</h3>
                                 {urgentContracts.map(c => {
                                     const days = getDaysUntil(c.cancellation_date);
                                     const warnDays = c.cancel_warn_days || 90;
@@ -1663,7 +1696,7 @@
                             <select value={filter.status} onChange={e => setFilter(prev => ({ ...prev, status: e.target.value }))}>
                                 <option value="">Alle Status</option>
                                 <option value="active">Aktiv</option>
-                                <option value="cancelled">Gekuendigt</option>
+                                <option value="cancelled">Gekündigt</option>
                             </select>
                             <button className={`sort-btn ${sort.field === 'name' ? 'active' : ''}`} onClick={() => toggleSort('name')}>
                                 Name <SortIndicator field="name" />
@@ -1672,7 +1705,7 @@
                                 Kosten <SortIndicator field="monthly_cost" />
                             </button>
                             <button className={`sort-btn ${sort.field === 'cancellation_date' ? 'active' : ''}`} onClick={() => toggleSort('cancellation_date')}>
-                                Kuendigung <SortIndicator field="cancellation_date" />
+                                Kündigung <SortIndicator field="cancellation_date" />
                             </button>
                         </div>
 
@@ -1680,7 +1713,7 @@
                         {filteredContracts.length === 0 && (
                             <div className="empty-state">
                                 <IconFileText />
-                                <p>{contracts.length === 0 ? 'Noch keine Vertraege vorhanden.' : 'Keine Vertraege fuer diesen Filter.'}</p>
+                                <p>{contracts.length === 0 ? 'Noch keine Verträge vorhanden.' : 'Keine Verträge für diesen Filter.'}</p>
                                 {contracts.length === 0 && (
                                     <button className="btn btn-primary mt-4" onClick={() => setEditContract(false)}>
                                         <IconPlus /> Ersten Vertrag anlegen
@@ -1708,7 +1741,7 @@
                                                 Mtl. Kosten <SortIndicator field="monthly_cost" />
                                             </th>
                                             <th onClick={() => toggleSort('cancellation_date')}>
-                                                Kuendigung bis <SortIndicator field="cancellation_date" />
+                                                Kündigung bis <SortIndicator field="cancellation_date" />
                                             </th>
                                             <th>Status</th>
                                             <th style={{ width: 90 }}></th>
@@ -1721,7 +1754,7 @@
                                                 <tr key={c.id}>
                                                     <td>
                                                         <span style={{ fontWeight: 500 }}>{c.name}</span>
-                                                        {c.auto_renew && c.status !== 'cancelled' ? <span className="text-xs text-3" style={{ marginLeft: 6 }} title="Auto-Verlaengerung">&#x21bb;</span> : null}
+                                                        {c.auto_renew && c.status !== 'cancelled' ? <span className="text-xs text-3" style={{ marginLeft: 6 }} title="Auto-Verlängerung">&#x21bb;</span> : null}
                                                         {(c.customer_number || c.contract_number) && (
                                                             <div className="text-xs text-3">
                                                                 {c.customer_number && <span>KdNr. {c.customer_number}</span>}
@@ -1758,7 +1791,7 @@
                                                     </td>
                                                     <td>
                                                         <span className={`status-badge ${c.status}`}>
-                                                            {c.status === 'active' ? 'Aktiv' : c.status === 'cancelled' ? 'Gekuendigt' : c.status}
+                                                            {c.status === 'active' ? 'Aktiv' : c.status === 'cancelled' ? 'Gekündigt' : c.status}
                                                         </span>
                                                         {c.status === 'cancelled' && c.cancelled_at && (
                                                             <div className="text-xs text-3" style={{ marginTop: 3 }}>
@@ -1767,7 +1800,7 @@
                                                         )}
                                                         {c.status === 'cancelled' && !!c.cancellation_confirmed && (
                                                             <div className="text-xs" style={{ color: 'var(--success)', marginTop: 2 }}>
-                                                                Bestaetigt
+                                                                Bestätigt
                                                             </div>
                                                         )}
                                                     </td>
@@ -1776,7 +1809,7 @@
                                                             <button className="btn btn-ghost" title="Bearbeiten" onClick={() => setEditContract(c)}>
                                                                 <IconEdit />
                                                             </button>
-                                                            <button className="btn btn-ghost" title="Loeschen" style={{ color: 'var(--danger)' }}
+                                                            <button className="btn btn-ghost" title="Löschen" style={{ color: 'var(--danger)' }}
                                                                     onClick={() => setDeleteConfirm({ id: c.id, name: c.name })}>
                                                                 <IconTrash />
                                                             </button>
@@ -1807,7 +1840,7 @@
                                                 </div>
                                                 <div>
                                                     <span className={`status-badge ${c.status}`}>
-                                                        {c.status === 'active' ? 'Aktiv' : 'Gekuendigt'}
+                                                        {c.status === 'active' ? 'Aktiv' : 'Gekündigt'}
                                                     </span>
                                                     {c.status === 'cancelled' && c.cancelled_at && (
                                                         <div className="text-xs text-3" style={{ marginTop: 3 }}>
@@ -1816,7 +1849,7 @@
                                                     )}
                                                     {c.status === 'cancelled' && !!c.cancellation_confirmed && (
                                                         <div className="text-xs" style={{ color: 'var(--success)', marginTop: 2 }}>
-                                                            Bestaetigt
+                                                            Bestätigt
                                                         </div>
                                                     )}
                                                 </div>
@@ -1839,7 +1872,7 @@
                                                     )}
                                                 </span>
                                                 <span>
-                                                    Kuendigung: <span className={`cancel-badge ${urgency}`}>{getCancelLabel(c)}</span>
+                                                    Kündigung: <span className={`cancel-badge ${urgency}`}>{getCancelLabel(c)}</span>
                                                 </span>
                                             </div>
                                             <div className="contract-card-actions">
@@ -1857,7 +1890,7 @@
                         )}
 
                         {/* Stats by Category */}
-                        {stats && stats.categories && stats.categories.length > 0 && (
+                        {showCategoryStats && stats && stats.categories && stats.categories.length > 0 && (
                             <div style={{ marginTop: 24 }}>
                                 <h3 className="fw-6 text-2" style={{ fontSize: 14, marginBottom: 12 }}>Kosten nach Kategorie</h3>
                                 <div className="card" style={{ overflow: 'hidden' }}>
@@ -1869,7 +1902,7 @@
                                         }}>
                                             <div>
                                                 <span className="category-badge">{cat.category}</span>
-                                                <span className="text-xs text-3" style={{ marginLeft: 8 }}>{cat.count} {cat.count === 1 ? 'Vertrag' : 'Vertraege'}</span>
+                                                <span className="text-xs text-3" style={{ marginLeft: 8 }}>{cat.count} {cat.count === 1 ? 'Vertrag' : 'Verträge'}</span>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
                                                 <span style={{ fontWeight: 600, fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{(cat.monthly_total || 0).toFixed(2)} EUR</span>
@@ -1898,11 +1931,31 @@
                         />
                     )}
 
-                    {showExport && (
-                        <ExportModal
-                            onClose={() => setShowExport(false)}
+                    {showSettings && (
+                        <SettingsModal
+                            onClose={() => setShowSettings(false)}
                             showToast={showToast}
                             onImported={loadContracts}
+                            user={user}
+                            contracts={contracts}
+                            onAccountDeleted={() => {
+                                localStorage.removeItem('contracts_session');
+                                localStorage.removeItem('contracts_user');
+                                setUser('');
+                                setUserId(null);
+                                setContracts([]);
+                                setStats(null);
+                                setView('login');
+                                setPasswordMode(null);
+                                setSelectedUser('');
+                                setShowSettings(false);
+                                loadUsers();
+                            }}
+                            showCategoryStats={showCategoryStats}
+                            onToggleCategoryStats={(val) => {
+                                setShowCategoryStats(val);
+                                localStorage.setItem('contracts_showCategoryStats', val);
+                            }}
                         />
                     )}
 
@@ -1910,17 +1963,9 @@
 
                     {deleteConfirm && (
                         <DeleteConfirmModal
-                            message={<span><strong>"{deleteConfirm.name}"</strong> wird unwiderruflich geloescht.</span>}
+                            message={<span><strong>"{deleteConfirm.name}"</strong> wird unwiderruflich gelöscht.</span>}
                             onConfirm={handleDeleteContract}
                             onCancel={() => setDeleteConfirm(null)}
-                        />
-                    )}
-
-                    {deleteUserConfirm && (
-                        <DeleteConfirmModal
-                            message={<span>Dein Account <strong>"{user}"</strong> und alle {contracts.length} Vertraege werden unwiderruflich geloescht.</span>}
-                            onConfirm={handleDeleteUser}
-                            onCancel={() => setDeleteUserConfirm(false)}
                         />
                     )}
 

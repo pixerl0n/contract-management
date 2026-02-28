@@ -1,6 +1,6 @@
 FROM node:24.13.1-alpine3.22
 
-# Build-Tools fuer better-sqlite3 (native Kompilierung)
+# Build-Tools für better-sqlite3 (native Kompilierung)
 RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
