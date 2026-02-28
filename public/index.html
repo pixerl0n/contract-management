@@ -1450,7 +1450,7 @@
             const getCancelLabel = (contract) => {
                 if (contract.status !== 'active') return formatDate(contract.cancellation_date);
                 const days = getDaysUntil(contract.cancellation_date);
-                if (days < 0) return contract.auto_renew ? 'Verlängert sich' : 'Abgelaufen';
+                if (days < 0) return contract.auto_renew ? `Verl. ${formatDate(contract.end_date)}` : 'Abgelaufen';
                 if (days === 0) return 'Heute!';
                 if (days === 1) return 'Morgen!';
                 if (days <= (contract.cancel_warn_days || 90)) return `${days} Tage`;
@@ -1783,7 +1783,7 @@
                                                         <span className={`cancel-badge ${urgency}`}>
                                                             {getCancelLabel(c)}
                                                         </span>
-                                                        {urgency === 'ok' && c.status === 'active' && (
+                                                        {urgency === 'ok' && c.status === 'active' && !(c.auto_renew && getDaysUntil(c.cancellation_date) < 0) && (
                                                             <span className="text-xs text-3" style={{ marginLeft: 6 }}>
                                                                 {formatDate(c.cancellation_date)}
                                                             </span>
