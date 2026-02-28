@@ -1,5 +1,17 @@
 [
     {
+        "version": "1.2.0",
+        "date": "2026-02-28",
+        "type": "minor",
+        "changes": [
+            "Vertragsgruppen: Verträge aus verschiedenen Kategorien zu eigenen Gruppen zusammenfassen (z.B. Wohnung)",
+            "Vertragsgruppen: Aggregierte Kostenübersicht pro Gruppe (monatlich/jährlich)",
+            "Vertragsgruppen: Farbiges Badge und Filter in der Vertragsliste",
+            "Vertragsgruppen: Verwaltung (erstellen, bearbeiten, löschen) in den Einstellungen",
+            "Vertragsgruppen: Maximal 10 Gruppen pro Benutzer mit individueller Farbe"
+        ]
+    },
+    {
         "version": "1.1.7",
         "date": "2026-02-28",
         "type": "patch",

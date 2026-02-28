@@ -180,6 +180,17 @@ function calculateMonthlyCost(cost, billing_interval) {
     return Math.round((cost / interval.factor) * 100) / 100;
 }
 
+function validateGroup(body) {
+    const { name, color, sort_order } = body;
+    if (!name || typeof name !== 'string' || name.trim().length < 1 || name.trim().length > 50)
+        return 'Name: 1-50 Zeichen';
+    if (color !== undefined && color !== null && (typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color)))
+        return 'Farbe: ungültiges Format (z.B. #4CAF50)';
+    if (sort_order !== undefined && sort_order !== null && (!Number.isInteger(sort_order) || sort_order < 0 || sort_order > 100))
+        return 'Reihenfolge: 0-100';
+    return null;
+}
+
 const VALID_STATUSES = ['active', 'cancelled', 'expired'];
 
 function validateContract(body) {
@@ -223,6 +234,8 @@ function validateContract(body) {
     if (body.cancellation_date_override !== undefined && body.cancellation_date_override !== null &&
         (typeof body.cancellation_date_override !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.cancellation_date_override) || isNaN(Date.parse(body.cancellation_date_override))))
         return 'Kündigungsdatum (manuell): ungültiges Format (YYYY-MM-DD)';
+    if (body.group_id !== undefined && body.group_id !== null && (!Number.isInteger(body.group_id) || body.group_id < 1))
+        return 'Ungültige Gruppe';
     return null;
 }
 
@@ -305,6 +318,18 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_contracts_user ON contracts(user_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts(user_id, status)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_contracts_cancel ON contracts(user_id, cancellation_date)`);
 
+db.exec(`
+    CREATE TABLE IF NOT EXISTS contract_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        color TEXT,
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, name)
+    )
+`);
+
 console.log('✓ Datenbank initialisiert (better-sqlite3, WAL-Modus)');
 
 // Migration: Add new v1.1 columns if missing
@@ -343,6 +368,9 @@ if (!cols.includes('contract_number')) {
 if (!cols.includes('cancellation_date_override')) {
     db.exec("ALTER TABLE contracts ADD COLUMN cancellation_date_override TEXT");
 }
+if (!cols.includes('group_id')) {
+    db.exec("ALTER TABLE contracts ADD COLUMN group_id INTEGER REFERENCES contract_groups(id) ON DELETE SET NULL");
+}
 
 // ============================================================================
 // PREPARED STATEMENTS
@@ -360,6 +388,16 @@ const stmts = {
     verifySession: db.prepare("SELECT id, name FROM users WHERE session_token = ? AND session_expires > datetime('now')"),
     clearSession: db.prepare('UPDATE users SET session_token = NULL, session_expires = NULL WHERE name = ?'),
 
+    // Groups
+    getGroups: db.prepare('SELECT * FROM contract_groups WHERE user_id = ? ORDER BY sort_order ASC, name ASC'),
+    getGroup: db.prepare('SELECT * FROM contract_groups WHERE id = ? AND user_id = ?'),
+    getGroupByName: db.prepare('SELECT * FROM contract_groups WHERE user_id = ? AND name = ?'),
+    insertGroup: db.prepare('INSERT INTO contract_groups (user_id, name, color, sort_order) VALUES (?, ?, ?, ?)'),
+    updateGroup: db.prepare('UPDATE contract_groups SET name = ?, color = ?, sort_order = ? WHERE id = ? AND user_id = ?'),
+    deleteGroup: db.prepare('DELETE FROM contract_groups WHERE id = ? AND user_id = ?'),
+    clearGroupFromContracts: db.prepare('UPDATE contracts SET group_id = NULL WHERE group_id = ? AND user_id = ?'),
+    deleteUserGroups: db.prepare('DELETE FROM contract_groups WHERE user_id = ?'),
+
     // Contracts
     getContracts: db.prepare('SELECT * FROM contracts WHERE user_id = ? ORDER BY cancellation_date ASC'),
     getContract: db.prepare('SELECT * FROM contracts WHERE id = ? AND user_id = ?'),
@@ -368,8 +406,8 @@ const stmts = {
             cancellation_period_months, cancellation_date, end_date, cost, billing_interval,
             monthly_cost, cashback, description, status, auto_renew, notify, split_count,
             cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
-            cancellation_date_override, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            cancellation_date_override, notes, group_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
     updateContract: db.prepare(`
         UPDATE contracts SET name=?, category=?, start_date=?, duration_months=?,
@@ -377,7 +415,7 @@ const stmts = {
             billing_interval=?, monthly_cost=?, cashback=?, description=?, status=?,
             auto_renew=?, notify=?, split_count=?, cancel_warn_days=?,
             cancelled_at=?, cancellation_confirmed=?, customer_number=?, contract_number=?,
-            cancellation_date_override=?, notes=?, updated_at=CURRENT_TIMESTAMP
+            cancellation_date_override=?, notes=?, group_id=?, updated_at=CURRENT_TIMESTAMP
         WHERE id=? AND user_id=?
     `),
     deleteContract: db.prepare('DELETE FROM contracts WHERE id = ? AND user_id = ?'),
@@ -391,6 +429,18 @@ const stmts = {
             SUM(monthly_cost * 12 / COALESCE(NULLIF(split_count, 0), 1)) as yearly_effective
         FROM contracts WHERE user_id = ? AND status = 'active'
         GROUP BY category ORDER BY monthly_total DESC
+    `),
+    getGroupStats: db.prepare(`
+        SELECT g.id as group_id, g.name as group_name, g.color as group_color,
+            COUNT(c.id) as count,
+            SUM(c.monthly_cost) as monthly_total,
+            SUM(c.monthly_cost * 12) as yearly_total,
+            SUM(c.monthly_cost / COALESCE(NULLIF(c.split_count, 0), 1)) as monthly_effective,
+            SUM(c.monthly_cost * 12 / COALESCE(NULLIF(c.split_count, 0), 1)) as yearly_effective
+        FROM contract_groups g
+        INNER JOIN contracts c ON c.group_id = g.id AND c.user_id = g.user_id AND c.status = 'active'
+        WHERE g.user_id = ?
+        GROUP BY g.id ORDER BY g.sort_order ASC, g.name ASC
     `),
     exportContracts: db.prepare('SELECT * FROM contracts WHERE user_id = ? ORDER BY name')
 };
@@ -590,11 +640,101 @@ app.delete('/api/users/:user', validateApiKey, validateSession, (req, res) => {
 
         stmts.clearSession.run(req.params.user);
         stmts.deleteUserContracts.run(req.sessionUserId);
+        stmts.deleteUserGroups.run(req.sessionUserId);
         stmts.deleteUser.run(req.sessionUserId);
         res.json({ success: true, user: req.params.user });
     } catch (error) {
         console.error('Delete user error:', error.message);
         res.status(500).json({ error: 'Fehler beim Löschen' });
+    }
+});
+
+// ============================================================================
+// CONTRACT GROUP ENDPOINTS
+// ============================================================================
+
+// Get all groups for session user
+app.get('/api/groups', validateApiKey, validateSession, (req, res) => {
+    try {
+        const groups = stmts.getGroups.all(req.sessionUserId);
+        res.json(groups);
+    } catch (error) {
+        console.error('Fetch groups error:', error.message);
+        res.status(500).json({ error: 'Fehler beim Laden der Gruppen' });
+    }
+});
+
+// Create new group
+app.post('/api/groups', validateApiKey, validateSession, (req, res) => {
+    try {
+        const validationErr = validateGroup(req.body);
+        if (validationErr) return res.status(400).json({ error: validationErr });
+
+        const existing = stmts.getGroups.all(req.sessionUserId);
+        if (existing.length >= 10) {
+            return res.status(400).json({ error: 'Maximal 10 Gruppen erlaubt' });
+        }
+
+        const duplicate = stmts.getGroupByName.get(req.sessionUserId, req.body.name.trim());
+        if (duplicate) {
+            return res.status(409).json({ error: 'Gruppenname existiert bereits' });
+        }
+
+        const result = stmts.insertGroup.run(
+            req.sessionUserId,
+            req.body.name.trim(),
+            req.body.color || null,
+            req.body.sort_order ?? 0
+        );
+        res.json({ success: true, id: Number(result.lastInsertRowid) });
+    } catch (error) {
+        console.error('Create group error:', error.message);
+        res.status(500).json({ error: 'Fehler beim Erstellen der Gruppe' });
+    }
+});
+
+// Update group
+app.put('/api/groups/:id', validateApiKey, validateSession, (req, res) => {
+    try {
+        const existing = stmts.getGroup.get(req.params.id, req.sessionUserId);
+        if (!existing) return res.status(404).json({ error: 'Gruppe nicht gefunden' });
+
+        const validationErr = validateGroup(req.body);
+        if (validationErr) return res.status(400).json({ error: validationErr });
+
+        if (req.body.name.trim() !== existing.name) {
+            const duplicate = stmts.getGroupByName.get(req.sessionUserId, req.body.name.trim());
+            if (duplicate) {
+                return res.status(409).json({ error: 'Gruppenname existiert bereits' });
+            }
+        }
+
+        stmts.updateGroup.run(
+            req.body.name.trim(),
+            req.body.color || null,
+            req.body.sort_order ?? existing.sort_order ?? 0,
+            req.params.id,
+            req.sessionUserId
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Update group error:', error.message);
+        res.status(500).json({ error: 'Fehler beim Aktualisieren der Gruppe' });
+    }
+});
+
+// Delete group (clears group_id on associated contracts)
+app.delete('/api/groups/:id', validateApiKey, validateSession, (req, res) => {
+    try {
+        const existing = stmts.getGroup.get(req.params.id, req.sessionUserId);
+        if (!existing) return res.status(404).json({ error: 'Gruppe nicht gefunden' });
+
+        stmts.clearGroupFromContracts.run(req.params.id, req.sessionUserId);
+        stmts.deleteGroup.run(req.params.id, req.sessionUserId);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Delete group error:', error.message);
+        res.status(500).json({ error: 'Fehler beim Löschen der Gruppe' });
     }
 });
 
@@ -606,14 +746,20 @@ app.delete('/api/users/:user', validateApiKey, validateSession, (req, res) => {
 app.get('/api/contracts', validateApiKey, validateSession, (req, res) => {
     try {
         const rows = stmts.getContracts.all(req.sessionUserId);
+        const allGroups = stmts.getGroups.all(req.sessionUserId);
+        const groupMap = Object.fromEntries(allGroups.map(g => [g.id, g]));
 
         // Recalculate dates for auto_renew active contracts (unless manually overridden)
         const contracts = rows.map(row => {
+            let contract = row;
             if (row.auto_renew && row.status === 'active') {
                 const dates = calculateDates(row.start_date, row.duration_months, row.cancellation_period_months, true);
-                return { ...row, end_date: dates.end_date, cancellation_date: row.cancellation_date_override || dates.cancellation_date };
+                contract = { ...row, end_date: dates.end_date, cancellation_date: row.cancellation_date_override || dates.cancellation_date };
             }
-            return row;
+            if (contract.group_id && groupMap[contract.group_id]) {
+                contract = { ...contract, group_name: groupMap[contract.group_id].name, group_color: groupMap[contract.group_id].color };
+            }
+            return contract;
         });
 
         res.json(contracts);
@@ -631,7 +777,8 @@ app.get('/api/contracts/stats', validateApiKey, validateSession, (req, res) => {
         const totalYearly = categories.reduce((sum, c) => sum + (c.yearly_total || 0), 0);
         const totalMonthlyEffective = Math.round(categories.reduce((sum, c) => sum + (c.monthly_effective || 0), 0) * 100) / 100;
         const totalYearlyEffective = Math.round(categories.reduce((sum, c) => sum + (c.yearly_effective || 0), 0) * 100) / 100;
-        res.json({ categories, totalMonthly, totalYearly, totalMonthlyEffective, totalYearlyEffective });
+        const groups = stmts.getGroupStats.all(req.sessionUserId);
+        res.json({ categories, totalMonthly, totalYearly, totalMonthlyEffective, totalYearlyEffective, groups });
     } catch (error) {
         console.error('Fetch stats error:', error.message);
         res.status(500).json({ error: 'Fehler beim Laden der Statistiken' });
@@ -659,7 +806,7 @@ app.post('/api/contracts', validateApiKey, validateSession, (req, res) => {
         const { name, category, start_date, duration_months, cancellation_period_months, cost,
                 billing_interval, cashback, description, status, auto_renew, notify, split_count,
                 cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
-                cancellation_date_override, notes } = req.body;
+                cancellation_date_override, notes, group_id } = req.body;
 
         const autoRenew = auto_renew !== undefined ? (auto_renew ? 1 : 0) : 1;
         const notifyFlag = notify !== undefined ? (notify ? 1 : 0) : 1;
@@ -670,11 +817,17 @@ app.post('/api/contracts', validateApiKey, validateSession, (req, res) => {
         const customerNumber = customer_number || null;
         const contractNumber = contract_number || null;
         const cancelOverride = cancellation_date_override || null;
+        const groupId = group_id || null;
         const interval = billing_interval || 'monthly';
         const monthlyCost = calculateMonthlyCost(cost, interval);
         const contractStatus = status || 'active';
         const dates = calculateDates(start_date, duration_months, cancellation_period_months, autoRenew);
         const finalCancelDate = cancelOverride || dates.cancellation_date;
+
+        if (groupId) {
+            const group = stmts.getGroup.get(groupId, req.sessionUserId);
+            if (!group) return res.status(400).json({ error: 'Ungültige Gruppe' });
+        }
 
         const result = stmts.insertContract.run(
             req.sessionUserId,
@@ -700,7 +853,8 @@ app.post('/api/contracts', validateApiKey, validateSession, (req, res) => {
             customerNumber,
             contractNumber,
             cancelOverride,
-            notes || null
+            notes || null,
+            groupId
         );
 
         res.json({ success: true, id: Number(result.lastInsertRowid) });
@@ -722,7 +876,7 @@ app.put('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
         const { name, category, start_date, duration_months, cancellation_period_months, cost,
                 billing_interval, cashback, description, status, auto_renew, notify, split_count,
                 cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
-                cancellation_date_override, notes } = req.body;
+                cancellation_date_override, notes, group_id } = req.body;
 
         const autoRenew = auto_renew !== undefined ? (auto_renew ? 1 : 0) : 1;
         const notifyFlag = notify !== undefined ? (notify ? 1 : 0) : 1;
@@ -733,11 +887,17 @@ app.put('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
         const customerNumber = customer_number || null;
         const contractNumber = contract_number || null;
         const cancelOverride = cancellation_date_override || null;
+        const groupId = group_id || null;
         const interval = billing_interval || 'monthly';
         const monthlyCost = calculateMonthlyCost(cost, interval);
         const contractStatus = status || 'active';
         const dates = calculateDates(start_date, duration_months, cancellation_period_months, autoRenew);
         const finalCancelDate = cancelOverride || dates.cancellation_date;
+
+        if (groupId) {
+            const group = stmts.getGroup.get(groupId, req.sessionUserId);
+            if (!group) return res.status(400).json({ error: 'Ungültige Gruppe' });
+        }
 
         const result = stmts.updateContract.run(
             name.trim(),
@@ -763,6 +923,7 @@ app.put('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
             contractNumber,
             cancelOverride,
             notes || null,
+            groupId,
             req.params.id,
             req.sessionUserId
         );
@@ -890,7 +1051,8 @@ const importContracts = db.transaction((userId, contracts) => {
             customerNumber,
             contractNumber,
             cancelOverride,
-            c.notes || null
+            c.notes || null,
+            null
         );
         count++;
     }

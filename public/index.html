@@ -666,11 +666,32 @@
         }
 
         // ============ SETTINGS MODAL ============
-        function SettingsModal({ onClose, showToast, onImported, user, contracts, onAccountDeleted, showCategoryStats, onToggleCategoryStats, hideExpiredCancelled, onToggleHideExpiredCancelled }) {
+        function SettingsModal({ onClose, showToast, onImported, user, contracts, onAccountDeleted, showCategoryStats, onToggleCategoryStats, hideExpiredCancelled, onToggleHideExpiredCancelled, groups, onSaveGroup, onDeleteGroup, showGroupStats, onToggleGroupStats }) {
             const [importing, setImporting] = useState(false);
             const [confirmDelete, setConfirmDelete] = useState(false);
             const [deleting, setDeleting] = useState(false);
+            const [editGroup, setEditGroup] = useState(null);
             const fileRef = useRef(null);
+
+            const handleSaveGroup = async () => {
+                if (!editGroup.name.trim()) return;
+                try {
+                    await onSaveGroup(editGroup);
+                    setEditGroup(null);
+                    showToast(editGroup.id ? 'Gruppe aktualisiert' : 'Gruppe erstellt');
+                } catch (e) {
+                    showToast(e.message, 'error');
+                }
+            };
+
+            const handleDeleteGroup = async (id) => {
+                try {
+                    await onDeleteGroup(id);
+                    showToast('Gruppe gelöscht');
+                } catch (e) {
+                    showToast(e.message, 'error');
+                }
+            };
 
             function download(format) {
                 const sessionToken = localStorage.getItem('contracts_session') || '';
@@ -755,12 +776,61 @@
 
                         <div className="divider" />
 
+                        <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 16 }}>Vertragsgruppen</h3>
+                        <div className="gap-3">
+                            {groups.map(g => (
+                                <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                    <span style={{
+                                        width: 14, height: 14, borderRadius: '50%',
+                                        backgroundColor: g.color || 'var(--text-secondary)',
+                                        display: 'inline-block', flexShrink: 0
+                                    }} />
+                                    <span style={{ flex: 1 }}>{g.name}</span>
+                                    <button className="btn btn-sm btn-secondary" onClick={() => setEditGroup(g)}>Bearbeiten</button>
+                                    <button className="btn btn-sm btn-danger" onClick={() => handleDeleteGroup(g.id)}>Löschen</button>
+                                </div>
+                            ))}
+
+                            {groups.length < 10 && !editGroup && (
+                                <button className="btn btn-sm btn-secondary" onClick={() => setEditGroup({ name: '', color: '#4CAF50' })}>
+                                    + Neue Gruppe
+                                </button>
+                            )}
+
+                            {editGroup && (
+                                <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+                                    <input
+                                        type="text" placeholder="Gruppenname" maxLength={50}
+                                        value={editGroup.name}
+                                        onChange={e => setEditGroup({ ...editGroup, name: e.target.value })}
+                                        style={{ flex: 1 }}
+                                    />
+                                    <input
+                                        type="color" value={editGroup.color || '#4CAF50'}
+                                        onChange={e => setEditGroup({ ...editGroup, color: e.target.value })}
+                                        style={{ width: 40, height: 34, padding: 2, cursor: 'pointer' }}
+                                    />
+                                    <button className="btn btn-primary btn-sm" onClick={handleSaveGroup}>Speichern</button>
+                                    <button className="btn btn-sm btn-secondary" onClick={() => setEditGroup(null)}>Abbrechen</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="divider" />
+
                         <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 16 }}>Anzeige</h3>
                         <div className="gap-3">
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <label style={{ margin: 0, fontSize: 14 }}>Kosten nach Kategorie</label>
                                 <label className="toggle-switch">
                                     <input type="checkbox" checked={showCategoryStats} onChange={e => { onToggleCategoryStats(e.target.checked); showToast('Einstellung gespeichert'); }} />
+                                    <span className="toggle-slider" />
+                                </label>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <label style={{ margin: 0, fontSize: 14 }}>Gruppenkosten anzeigen</label>
+                                <label className="toggle-switch">
+                                    <input type="checkbox" checked={showGroupStats} onChange={e => { onToggleGroupStats(e.target.checked); showToast('Einstellung gespeichert'); }} />
                                     <span className="toggle-slider" />
                                 </label>
                             </div>
@@ -805,11 +875,12 @@
         }
 
         // ============ CONTRACT FORM MODAL ============
-        function ContractForm({ contract, categories, onSave, onClose }) {
+        function ContractForm({ contract, categories, groups, onSave, onClose }) {
             const isEdit = !!contract;
             const [form, setForm] = useState(contract ? {
                 name: contract.name,
                 category: contract.category,
+                group_id: contract.group_id || '',
                 start_date: contract.start_date,
                 duration_months: contract.duration_months,
                 cancellation_period_months: contract.cancellation_period_months,
@@ -831,6 +902,7 @@
             } : {
                 name: '',
                 category: categories[0] || 'Internet',
+                group_id: '',
                 start_date: new Date().toISOString().split('T')[0],
                 duration_months: 24,
                 cancellation_period_months: 3,
@@ -904,6 +976,7 @@
                 try {
                     await onSave({
                         ...form,
+                        group_id: form.group_id || null,
                         duration_months: parseInt(form.duration_months),
                         cancellation_period_months: parseInt(form.cancellation_period_months),
                         cost: parseFloat(form.cost),
@@ -941,6 +1014,16 @@
                                 <label>Kategorie</label>
                                 <select value={form.category} onChange={e => handleChange('category', e.target.value)}>
                                     {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Gruppe</label>
+                                <select value={form.group_id} onChange={e => setForm({...form, group_id: e.target.value ? Number(e.target.value) : ''})}>
+                                    <option value="">Keine Gruppe</option>
+                                    {groups.map(g => (
+                                        <option key={g.id} value={g.id}>{g.name}</option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -1142,9 +1225,10 @@
 
             // Data state
             const [contracts, setContracts] = useState([]);
+            const [groups, setGroups] = useState([]);
             const [stats, setStats] = useState(null);
             const [categories, setCategories] = useState([]);
-            const [filter, setFilter] = useState({ category: '', status: '', search: '' });
+            const [filter, setFilter] = useState({ category: '', status: '', search: '', group: '' });
             const [sort, setSort] = useState({ field: 'cancellation_date', dir: 'asc' });
 
             // UI state
@@ -1153,6 +1237,7 @@
             const [showChangelog, setShowChangelog] = useState(false);
             const [deleteConfirm, setDeleteConfirm] = useState(null); // null or {id, name}
             const [showCategoryStats, setShowCategoryStats] = useState(() => localStorage.getItem('contracts_showCategoryStats') !== 'false');
+            const [showGroupStats, setShowGroupStats] = useState(() => localStorage.getItem('contracts_showGroupStats') !== 'false');
             const [hideExpiredCancelled, setHideExpiredCancelled] = useState(() => localStorage.getItem('contracts_hideExpiredCancelled') !== 'false');
             const [showExpiredSection, setShowExpiredSection] = useState(false);
             const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -1202,10 +1287,11 @@
                 })();
             }, []);
 
-            // Load contracts when in dashboard
+            // Load contracts and groups when in dashboard
             useEffect(() => {
                 if (view === 'dashboard' && user) {
                     loadContracts();
+                    loadGroups();
                 }
             }, [view, user]);
 
@@ -1230,6 +1316,29 @@
                 } catch (e) {
                     showToast('Fehler beim Laden der Verträge', 'error');
                 }
+            };
+
+            const loadGroups = async () => {
+                try {
+                    const res = await apiCall(`${API_BASE}/api/groups`);
+                    setGroups(await res.json());
+                } catch (e) {
+                    // Groups are optional, don't show error
+                }
+            };
+
+            const saveGroup = async (group) => {
+                const method = group.id ? 'PUT' : 'POST';
+                const url = group.id ? `${API_BASE}/api/groups/${group.id}` : `${API_BASE}/api/groups`;
+                await apiCall(url, { method, body: JSON.stringify(group) });
+                await loadGroups();
+                await loadContracts();
+            };
+
+            const deleteGroup = async (id) => {
+                await apiCall(`${API_BASE}/api/groups/${id}`, { method: 'DELETE' });
+                await loadGroups();
+                await loadContracts();
             };
 
             // ---- Auth handlers ----
@@ -1381,6 +1490,11 @@
                 }
             };
 
+            const handleToggleGroupStats = (val) => {
+                setShowGroupStats(val);
+                localStorage.setItem('contracts_showGroupStats', val);
+            };
+
             // ---- Filtering & Sorting ----
             const getFilteredContracts = () => {
                 let filtered = [...contracts];
@@ -1410,6 +1524,9 @@
                 }
                 if (filter.category) {
                     filtered = filtered.filter(c => c.category === filter.category);
+                }
+                if (filter.group) {
+                    filtered = filtered.filter(c => c.group_id === Number(filter.group));
                 }
                 if (filter.status) {
                     filtered = filtered.filter(c => c.status === filter.status);
@@ -1751,6 +1868,14 @@
                                 <option value="">Alle Kategorien</option>
                                 {usedCategories.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
+                            {groups.length > 0 && (
+                                <select value={filter.group || ''} onChange={e => setFilter(prev => ({ ...prev, group: e.target.value }))}>
+                                    <option value="">Alle Gruppen</option>
+                                    {groups.map(g => (
+                                        <option key={g.id} value={g.id}>{g.name}</option>
+                                    ))}
+                                </select>
+                            )}
                             <select value={filter.status} onChange={e => setFilter(prev => ({ ...prev, status: e.target.value }))}>
                                 <option value="">Alle Status</option>
                                 <option value="active">Aktiv</option>
@@ -1830,7 +1955,18 @@
                                                             </div>
                                                         )}
                                                     </td>
-                                                    <td><span className="category-badge">{c.category}</span></td>
+                                                    <td>
+                                                        <span className="category-badge">{c.category}</span>
+                                                        {c.group_name && (
+                                                            <span style={{
+                                                                backgroundColor: c.group_color || 'var(--text-secondary)',
+                                                                color: '#fff', borderRadius: 6, padding: '2px 8px',
+                                                                fontSize: '0.75rem', marginLeft: 4, display: 'inline-block'
+                                                            }}>
+                                                                {c.group_name}
+                                                            </span>
+                                                        )}
+                                                    </td>
                                                     <td>{formatDate(c.start_date)}</td>
                                                     <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                                                         <span style={{ fontWeight: 600 }}>{formatCost(c.monthly_cost)}</span>
@@ -1904,6 +2040,15 @@
                                                         {c.auto_renew && c.status !== 'cancelled' ? <span className="text-xs text-3" style={{ marginLeft: 6 }}>&#x21bb;</span> : null}
                                                     </div>
                                                     <span className="category-badge" style={{ marginTop: 4 }}>{c.category}</span>
+                                                    {c.group_name && (
+                                                        <span style={{
+                                                            backgroundColor: c.group_color || 'var(--text-secondary)',
+                                                            color: '#fff', borderRadius: 6, padding: '2px 8px',
+                                                            fontSize: '0.75rem', marginLeft: 4, display: 'inline-block'
+                                                        }}>
+                                                            {c.group_name}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <span className={`status-badge ${c.status}`}>
@@ -1975,6 +2120,35 @@
                                                 <span style={{ fontWeight: 600, fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{(cat.monthly_total || 0).toFixed(2).replace('.', ',')} €</span>
                                                 <span className="text-xs text-3" style={{ marginLeft: 4 }}>/ Monat</span>
                                             </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Stats by Group */}
+                        {showGroupStats && stats && stats.groups && stats.groups.length > 0 && (
+                            <div style={{ marginTop: 24 }}>
+                                <h3 className="fw-6 text-2" style={{ fontSize: 14, marginBottom: 12 }}>Kosten nach Gruppe</h3>
+                                <div className="card" style={{ overflow: 'hidden' }}>
+                                    {stats.groups.map((g, i) => (
+                                        <div key={g.group_id} style={{
+                                            display: 'flex', alignItems: 'center', gap: 8,
+                                            padding: '10px 16px',
+                                            borderTop: i > 0 ? '1px solid var(--border)' : 'none'
+                                        }}>
+                                            <span style={{
+                                                width: 12, height: 12, borderRadius: '50%',
+                                                backgroundColor: g.group_color || 'var(--text-secondary)',
+                                                flexShrink: 0
+                                            }} />
+                                            <span style={{ flex: 1, fontWeight: 500 }}>{g.group_name}</span>
+                                            <span style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>
+                                                {g.count} {g.count === 1 ? 'Vertrag' : 'Verträge'}
+                                            </span>
+                                            <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                                                {g.monthly_total.toFixed(2).replace('.', ',')} €/mtl.
+                                            </span>
                                         </div>
                                     ))}
                                 </div>
@@ -2143,6 +2317,7 @@
                         <ContractForm
                             contract={editContract || null}
                             categories={categories}
+                            groups={groups}
                             onSave={handleSaveContract}
                             onClose={() => setEditContract(null)}
                         />
@@ -2178,6 +2353,11 @@
                                 setHideExpiredCancelled(val);
                                 localStorage.setItem('contracts_hideExpiredCancelled', val);
                             }}
+                            groups={groups}
+                            onSaveGroup={saveGroup}
+                            onDeleteGroup={deleteGroup}
+                            showGroupStats={showGroupStats}
+                            onToggleGroupStats={handleToggleGroupStats}
                         />
                     )}
 
