@@ -300,7 +300,15 @@
             background: var(--bg-card); border-radius: var(--r-md);
             overflow: hidden; box-shadow: var(--shadow-sm);
             border: 1px solid var(--border);
+            table-layout: fixed;
         }
+        .contracts-table col.col-name { width: 25%; }
+        .contracts-table col.col-category { width: 14%; }
+        .contracts-table col.col-start { width: 11%; }
+        .contracts-table col.col-cost { width: 15%; }
+        .contracts-table col.col-cancel { width: 13%; }
+        .contracts-table col.col-status { width: 12%; }
+        .contracts-table col.col-actions { width: 10%; }
         .contracts-table th {
             background: var(--bg-elevated); color: var(--text-2);
             font-weight: 500; padding: 10px 14px; text-align: left;
@@ -818,7 +826,8 @@
                 cancelled_at: contract.cancelled_at || '',
                 cancellation_confirmed: !!contract.cancellation_confirmed,
                 customer_number: contract.customer_number || '',
-                contract_number: contract.contract_number || ''
+                contract_number: contract.contract_number || '',
+                cancellation_date_override: contract.cancellation_date_override || ''
             } : {
                 name: '',
                 category: categories[0] || 'Internet',
@@ -838,7 +847,8 @@
                 cancelled_at: '',
                 cancellation_confirmed: false,
                 customer_number: '',
-                contract_number: ''
+                contract_number: '',
+                cancellation_date_override: ''
             });
             const [saving, setSaving] = useState(false);
 
@@ -855,11 +865,15 @@
                 }
                 const cancel = new Date(end);
                 cancel.setMonth(cancel.getMonth() - parseInt(form.cancellation_period_months || 0));
+                const cancelDate = form.cancellation_date_override
+                    ? new Date(form.cancellation_date_override + 'T12:00:00').toLocaleDateString('de-DE')
+                    : cancel.toLocaleDateString('de-DE');
                 return {
                     end_date: end.toLocaleDateString('de-DE'),
-                    cancellation_date: cancel.toLocaleDateString('de-DE')
+                    cancellation_date: cancelDate,
+                    isOverridden: !!form.cancellation_date_override
                 };
-            }, [form.start_date, form.duration_months, form.cancellation_period_months, form.auto_renew]);
+            }, [form.start_date, form.duration_months, form.cancellation_period_months, form.auto_renew, form.cancellation_date_override]);
 
             const formRef = useRef(null);
             const autoResize = (el) => {
@@ -902,6 +916,7 @@
                         cancellation_confirmed: form.status === 'cancelled' ? form.cancellation_confirmed : false,
                         customer_number: form.customer_number || undefined,
                         contract_number: form.contract_number || undefined,
+                        cancellation_date_override: form.cancellation_date_override || null,
                     });
                 } finally {
                     setSaving(false);
@@ -948,7 +963,14 @@
                                            min="0" max="24" />
                                 </div>
                                 <div className="form-group">
-                                    <label>Kosten (EUR)</label>
+                                    <label>Kündigungsdatum {form.cancellation_date_override ? '(manuell)' : '(optional)'}</label>
+                                    <input type="date" value={form.cancellation_date_override} onChange={e => handleChange('cancellation_date_override', e.target.value)} />
+                                </div>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Kosten (€)</label>
                                     <input type="number" value={form.cost} onChange={e => handleChange('cost', e.target.value)}
                                            min="0" max="99999" step="0.01" />
                                 </div>
@@ -967,7 +989,7 @@
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Cashback</label>
-                                    <textarea maxLength="200" placeholder="z.B. 25 EUR via Check24" rows={1}
+                                    <textarea maxLength="200" placeholder="z.B. 25 € via Check24" rows={1}
                                         value={form.cashback} onChange={e => handleChange('cashback', e.target.value)}
                                         onInput={e => autoResize(e.target)} style={{ overflow: 'hidden' }} />
                                 </div>
@@ -1074,19 +1096,19 @@
                                         <span className="preview-value">{previewDates.end_date}</span>
                                     </div>
                                     <div className="preview-row">
-                                        <span className="preview-label">Kündigungsdatum</span>
+                                        <span className="preview-label">Kündigungsdatum{previewDates.isOverridden ? ' (manuell)' : ''}</span>
                                         <span className="preview-value">{previewDates.cancellation_date}</span>
                                     </div>
                                     {parseFloat(form.cost) > 0 && form.billing_interval && form.billing_interval !== 'monthly' && (
                                         <div className="preview-row" style={{ marginTop: 4, borderTop: '1px solid var(--border)', paddingTop: 4 }}>
                                             <span className="preview-label">Monatliche Kosten</span>
-                                            <span className="preview-value">{(parseFloat(form.cost) / ({quarterly:3,'semi-annual':6,annual:12}[form.billing_interval] || 1)).toFixed(2)} EUR</span>
+                                            <span className="preview-value">{(parseFloat(form.cost) / ({quarterly:3,'semi-annual':6,annual:12}[form.billing_interval] || 1)).toFixed(2).replace('.', ',')} €</span>
                                         </div>
                                     )}
                                     {parseFloat(form.cost) > 0 && (
                                         <div className="preview-row" style={{ marginTop: form.billing_interval === 'monthly' ? 4 : 0, borderTop: form.billing_interval === 'monthly' ? '1px solid var(--border)' : 'none', paddingTop: form.billing_interval === 'monthly' ? 4 : 0 }}>
                                             <span className="preview-label">Jährliche Kosten</span>
-                                            <span className="preview-value">{(parseFloat(form.cost) / ({monthly:1,quarterly:3,'semi-annual':6,annual:12}[form.billing_interval] || 1) * 12).toFixed(2)} EUR</span>
+                                            <span className="preview-value">{(parseFloat(form.cost) / ({monthly:1,quarterly:3,'semi-annual':6,annual:12}[form.billing_interval] || 1) * 12).toFixed(2).replace('.', ',')} €</span>
                                         </div>
                                     )}
                                 </div>
@@ -1447,7 +1469,7 @@
             };
 
             const formatCost = (cost) => {
-                return parseFloat(cost).toFixed(2) + ' EUR';
+                return parseFloat(cost).toFixed(2).replace('.', ',') + ' €';
             };
 
             const getDaysUntil = (dateStr) => {
@@ -1659,6 +1681,7 @@
                                 <EnvBadge />
                             </div>
                             <div className="row" style={{ gap: 4 }}>
+                                <span className="text-xs text-3" style={{ marginRight: 4 }}>{new Date().toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                 <span className="text-xs text-2" style={{ marginRight: 4 }}>{user}</span>
                                 <button className="btn btn-ghost" title={themeTitle} onClick={toggleTheme}>
                                     <ThemeIcon />
@@ -1679,15 +1702,15 @@
                         {stats && (
                             <div className="stats-bar">
                                 <div className="stat-card">
-                                    <div className="stat-value" style={{ color: 'var(--accent)' }}>{stats.totalMonthly.toFixed(2)} EUR</div>
+                                    <div className="stat-value" style={{ color: 'var(--accent)' }}>{stats.totalMonthly.toFixed(2).replace('.', ',')} €</div>
                                     <div className="stat-label">Monatlich gesamt</div>
                                 </div>
                                 <div className="stat-card">
-                                    <div className="stat-value" style={{ color: 'var(--accent)' }}>{(stats.totalMonthlyEffective ?? stats.totalMonthly).toFixed(2)} EUR</div>
+                                    <div className="stat-value" style={{ color: 'var(--accent)' }}>{(stats.totalMonthlyEffective ?? stats.totalMonthly).toFixed(2).replace('.', ',')} €</div>
                                     <div className="stat-label">Dein Anteil / Monat</div>
                                 </div>
                                 <div className="stat-card">
-                                    <div className="stat-value" style={{ color: 'var(--warning)' }}>{(stats.totalYearlyEffective ?? stats.totalYearly).toFixed(2)} EUR</div>
+                                    <div className="stat-value" style={{ color: 'var(--warning)' }}>{(stats.totalYearlyEffective ?? stats.totalYearly).toFixed(2).replace('.', ',')} €</div>
                                     <div className="stat-label">Dein Anteil / Jahr</div>
                                 </div>
                                 <div className="stat-card">
@@ -1761,6 +1784,15 @@
                         {filteredContracts.length > 0 && (
                             <div className="desktop-table">
                                 <table className="contracts-table">
+                                    <colgroup>
+                                        <col className="col-name" />
+                                        <col className="col-category" />
+                                        <col className="col-start" />
+                                        <col className="col-cost" />
+                                        <col className="col-cancel" />
+                                        <col className="col-status" />
+                                        <col className="col-actions" />
+                                    </colgroup>
                                     <thead>
                                         <tr>
                                             <th onClick={() => toggleSort('name')}>
@@ -1940,7 +1972,7 @@
                                                 <span className="text-xs text-3" style={{ marginLeft: 8 }}>{cat.count} {cat.count === 1 ? 'Vertrag' : 'Verträge'}</span>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
-                                                <span style={{ fontWeight: 600, fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{(cat.monthly_total || 0).toFixed(2)} EUR</span>
+                                                <span style={{ fontWeight: 600, fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{(cat.monthly_total || 0).toFixed(2).replace('.', ',')} €</span>
                                                 <span className="text-xs text-3" style={{ marginLeft: 4 }}>/ Monat</span>
                                             </div>
                                         </div>
@@ -1963,7 +1995,16 @@
                                 {showExpiredSection && (
                                     <>
                                         <div className="desktop-table">
-                                            <table>
+                                            <table className="contracts-table">
+                                                <colgroup>
+                                                    <col className="col-name" />
+                                                    <col className="col-category" />
+                                                    <col className="col-start" />
+                                                    <col className="col-cost" />
+                                                    <col className="col-cancel" />
+                                                    <col className="col-status" />
+                                                    <col className="col-actions" />
+                                                </colgroup>
                                                 <thead>
                                                     <tr>
                                                         <th>Name</th>

@@ -1,5 +1,19 @@
 [
     {
+        "version": "1.1.7",
+        "date": "2026-02-28",
+        "type": "patch",
+        "changes": [
+            "Abgelaufene Verträge: Eigener aufklappbarer Bereich mit vollständiger Tabelle",
+            "Kündigungsdatum: Manuelles Überschreiben des berechneten Datums möglich",
+            "Anzeige: Aktuelles Datum in der Navigationsleiste",
+            "Anzeige: Deutsche Zahlenformatierung (Komma statt Punkt, € statt EUR)",
+            "Tabelle: Feste Spaltenbreiten für einheitliches Layout",
+            "Kategorie: Verein/Mitgliedschaft zu Verein gekürzt",
+            "Einstellungen: Toast-Feedback beim Ändern von Optionen"
+        ]
+    },
+    {
         "version": "1.1.6",
         "date": "2026-02-28",
         "type": "minor",

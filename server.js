@@ -22,7 +22,7 @@ const CHANGELOG = JSON.parse(fs.readFileSync(path.join(__dirname, 'changelog.jso
 const CATEGORIES = [
     'Internet', 'Mobilfunk', 'Streaming', 'Versicherung',
     'Strom/Gas', 'Miete', 'Fitness', 'Abonnement',
-    'Cloud/Software', 'Verein/Mitgliedschaft', 'Leasing',
+    'Cloud/Software', 'Verein', 'Leasing',
     'Kredit', 'Wartung', 'Sonstiges'
 ];
 
@@ -220,6 +220,9 @@ function validateContract(body) {
     if (body.contract_number !== undefined && body.contract_number !== null &&
         (typeof body.contract_number !== 'string' || body.contract_number.length > 100))
         return 'Vertragsnummer: maximal 100 Zeichen';
+    if (body.cancellation_date_override !== undefined && body.cancellation_date_override !== null &&
+        (typeof body.cancellation_date_override !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.cancellation_date_override) || isNaN(Date.parse(body.cancellation_date_override))))
+        return 'Kündigungsdatum (manuell): ungültiges Format (YYYY-MM-DD)';
     return null;
 }
 
@@ -291,6 +294,7 @@ db.exec(`
         cancellation_confirmed INTEGER DEFAULT 0,
         customer_number TEXT,
         contract_number TEXT,
+        cancellation_date_override TEXT,
         notes TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -336,6 +340,9 @@ if (!cols.includes('customer_number')) {
 if (!cols.includes('contract_number')) {
     db.exec("ALTER TABLE contracts ADD COLUMN contract_number TEXT");
 }
+if (!cols.includes('cancellation_date_override')) {
+    db.exec("ALTER TABLE contracts ADD COLUMN cancellation_date_override TEXT");
+}
 
 // ============================================================================
 // PREPARED STATEMENTS
@@ -360,8 +367,9 @@ const stmts = {
         INSERT INTO contracts (user_id, name, category, start_date, duration_months,
             cancellation_period_months, cancellation_date, end_date, cost, billing_interval,
             monthly_cost, cashback, description, status, auto_renew, notify, split_count,
-            cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
+            cancellation_date_override, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
     updateContract: db.prepare(`
         UPDATE contracts SET name=?, category=?, start_date=?, duration_months=?,
@@ -369,7 +377,7 @@ const stmts = {
             billing_interval=?, monthly_cost=?, cashback=?, description=?, status=?,
             auto_renew=?, notify=?, split_count=?, cancel_warn_days=?,
             cancelled_at=?, cancellation_confirmed=?, customer_number=?, contract_number=?,
-            notes=?, updated_at=CURRENT_TIMESTAMP
+            cancellation_date_override=?, notes=?, updated_at=CURRENT_TIMESTAMP
         WHERE id=? AND user_id=?
     `),
     deleteContract: db.prepare('DELETE FROM contracts WHERE id = ? AND user_id = ?'),
@@ -599,11 +607,11 @@ app.get('/api/contracts', validateApiKey, validateSession, (req, res) => {
     try {
         const rows = stmts.getContracts.all(req.sessionUserId);
 
-        // Recalculate dates for auto_renew active contracts
+        // Recalculate dates for auto_renew active contracts (unless manually overridden)
         const contracts = rows.map(row => {
             if (row.auto_renew && row.status === 'active') {
                 const dates = calculateDates(row.start_date, row.duration_months, row.cancellation_period_months, true);
-                return { ...row, end_date: dates.end_date, cancellation_date: dates.cancellation_date };
+                return { ...row, end_date: dates.end_date, cancellation_date: row.cancellation_date_override || dates.cancellation_date };
             }
             return row;
         });
@@ -650,7 +658,8 @@ app.post('/api/contracts', validateApiKey, validateSession, (req, res) => {
 
         const { name, category, start_date, duration_months, cancellation_period_months, cost,
                 billing_interval, cashback, description, status, auto_renew, notify, split_count,
-                cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number, notes } = req.body;
+                cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
+                cancellation_date_override, notes } = req.body;
 
         const autoRenew = auto_renew !== undefined ? (auto_renew ? 1 : 0) : 1;
         const notifyFlag = notify !== undefined ? (notify ? 1 : 0) : 1;
@@ -660,10 +669,12 @@ app.post('/api/contracts', validateApiKey, validateSession, (req, res) => {
         const cancelConfirmed = cancellation_confirmed ? 1 : 0;
         const customerNumber = customer_number || null;
         const contractNumber = contract_number || null;
+        const cancelOverride = cancellation_date_override || null;
         const interval = billing_interval || 'monthly';
         const monthlyCost = calculateMonthlyCost(cost, interval);
         const contractStatus = status || 'active';
         const dates = calculateDates(start_date, duration_months, cancellation_period_months, autoRenew);
+        const finalCancelDate = cancelOverride || dates.cancellation_date;
 
         const result = stmts.insertContract.run(
             req.sessionUserId,
@@ -672,7 +683,7 @@ app.post('/api/contracts', validateApiKey, validateSession, (req, res) => {
             start_date,
             duration_months,
             cancellation_period_months,
-            dates.cancellation_date,
+            finalCancelDate,
             dates.end_date,
             cost,
             interval,
@@ -688,6 +699,7 @@ app.post('/api/contracts', validateApiKey, validateSession, (req, res) => {
             cancelConfirmed,
             customerNumber,
             contractNumber,
+            cancelOverride,
             notes || null
         );
 
@@ -709,7 +721,8 @@ app.put('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
 
         const { name, category, start_date, duration_months, cancellation_period_months, cost,
                 billing_interval, cashback, description, status, auto_renew, notify, split_count,
-                cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number, notes } = req.body;
+                cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
+                cancellation_date_override, notes } = req.body;
 
         const autoRenew = auto_renew !== undefined ? (auto_renew ? 1 : 0) : 1;
         const notifyFlag = notify !== undefined ? (notify ? 1 : 0) : 1;
@@ -719,10 +732,12 @@ app.put('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
         const cancelConfirmed = cancellation_confirmed ? 1 : 0;
         const customerNumber = customer_number || null;
         const contractNumber = contract_number || null;
+        const cancelOverride = cancellation_date_override || null;
         const interval = billing_interval || 'monthly';
         const monthlyCost = calculateMonthlyCost(cost, interval);
         const contractStatus = status || 'active';
         const dates = calculateDates(start_date, duration_months, cancellation_period_months, autoRenew);
+        const finalCancelDate = cancelOverride || dates.cancellation_date;
 
         const result = stmts.updateContract.run(
             name.trim(),
@@ -730,7 +745,7 @@ app.put('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
             start_date,
             duration_months,
             cancellation_period_months,
-            dates.cancellation_date,
+            finalCancelDate,
             dates.end_date,
             cost,
             interval,
@@ -746,6 +761,7 @@ app.put('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
             cancelConfirmed,
             customerNumber,
             contractNumber,
+            cancelOverride,
             notes || null,
             req.params.id,
             req.sessionUserId
@@ -843,10 +859,12 @@ const importContracts = db.transaction((userId, contracts) => {
         const cancelConfirmed = c.cancellation_confirmed ? 1 : 0;
         const customerNumber = c.customer_number || null;
         const contractNumber = c.contract_number || null;
+        const cancelOverride = c.cancellation_date_override || null;
         const interval = c.billing_interval || 'monthly';
         const monthlyCost = calculateMonthlyCost(c.cost, interval);
         const contractStatus = c.status || 'active';
         const dates = calculateDates(c.start_date, c.duration_months, c.cancellation_period_months, autoRenew);
+        const finalCancelDate = cancelOverride || dates.cancellation_date;
 
         stmts.insertContract.run(
             userId,
@@ -855,7 +873,7 @@ const importContracts = db.transaction((userId, contracts) => {
             c.start_date,
             c.duration_months,
             c.cancellation_period_months,
-            dates.cancellation_date,
+            finalCancelDate,
             dates.end_date,
             c.cost,
             interval,
@@ -871,6 +889,7 @@ const importContracts = db.transaction((userId, contracts) => {
             cancelConfirmed,
             customerNumber,
             contractNumber,
+            cancelOverride,
             c.notes || null
         );
         count++;
