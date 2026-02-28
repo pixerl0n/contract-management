@@ -1,5 +1,26 @@
 [
     {
+        "version": "1.1.2",
+        "date": "2026-02-28",
+        "type": "patch",
+        "changes": [
+            "Vertragsnummer: Optionales Feld pro Vertrag (max 100 Zeichen)",
+            "Suche: Vertragsnummer wird jetzt durchsucht",
+            "Uebersicht: Auto-Verlaengerung-Symbol bei gekuendigten Vertraegen ausgeblendet"
+        ]
+    },
+    {
+        "version": "1.1.1",
+        "date": "2026-02-28",
+        "type": "patch",
+        "changes": [
+            "Kuendigungstracking: Datum und Bestaetigung bei gekuendigten Vertraegen erfassen",
+            "Kundennummer: Optionales Feld pro Vertrag (max 100 Zeichen)",
+            "Suche: Kategorie und Kundennummer werden jetzt durchsucht",
+            "Formular: Textfelder (Cashback, Beschreibung, Notizen) wachsen automatisch mit dem Inhalt"
+        ]
+    },
+    {
         "version": "1.1.0",
         "date": "2026-02-27",
         "type": "minor",

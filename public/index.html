@@ -742,11 +742,16 @@
                 billing_interval: contract.billing_interval || 'monthly',
                 cashback: contract.cashback || '',
                 notify: contract.notify !== undefined ? !!contract.notify : true,
+                cancel_warn_days: contract.cancel_warn_days || 90,
                 split_count: contract.split_count || 1,
                 description: contract.description || '',
                 auto_renew: !!contract.auto_renew,
                 notes: contract.notes || '',
-                status: contract.status || 'active'
+                status: contract.status || 'active',
+                cancelled_at: contract.cancelled_at || '',
+                cancellation_confirmed: !!contract.cancellation_confirmed,
+                customer_number: contract.customer_number || '',
+                contract_number: contract.contract_number || ''
             } : {
                 name: '',
                 category: categories[0] || 'Internet',
@@ -757,11 +762,16 @@
                 billing_interval: 'monthly',
                 cashback: '',
                 notify: true,
+                cancel_warn_days: 90,
                 split_count: 1,
                 description: '',
                 auto_renew: true,
                 notes: '',
-                status: 'active'
+                status: 'active',
+                cancelled_at: '',
+                cancellation_confirmed: false,
+                customer_number: '',
+                contract_number: ''
             });
             const [saving, setSaving] = useState(false);
 
@@ -784,8 +794,26 @@
                 };
             }, [form.start_date, form.duration_months, form.cancellation_period_months, form.auto_renew]);
 
+            const formRef = useRef(null);
+            const autoResize = (el) => {
+                if (!el) return;
+                el.style.height = 'auto';
+                el.style.height = el.scrollHeight + 'px';
+            };
+            useEffect(() => {
+                if (formRef.current) {
+                    formRef.current.querySelectorAll('textarea').forEach(autoResize);
+                }
+            }, []);
+
             const handleChange = (field, value) => {
-                setForm(prev => ({ ...prev, [field]: value }));
+                setForm(prev => {
+                    const updated = { ...prev, [field]: value };
+                    if (field === 'status' && value === 'cancelled' && !prev.cancelled_at) {
+                        updated.cancelled_at = new Date().toISOString().split('T')[0];
+                    }
+                    return updated;
+                });
             };
 
             const handleSubmit = async (e) => {
@@ -801,7 +829,12 @@
                         billing_interval: form.billing_interval,
                         cashback: form.cashback || undefined,
                         notify: form.notify,
+                        cancel_warn_days: parseInt(form.cancel_warn_days) || 90,
                         split_count: parseInt(form.split_count) || 1,
+                        cancelled_at: form.status === 'cancelled' ? (form.cancelled_at || null) : null,
+                        cancellation_confirmed: form.status === 'cancelled' ? form.cancellation_confirmed : false,
+                        customer_number: form.customer_number || undefined,
+                        contract_number: form.contract_number || undefined,
                     });
                 } finally {
                     setSaving(false);
@@ -815,7 +848,7 @@
                         <h3 className="fw-7" style={{ fontSize: 17, marginBottom: 16 }}>
                             {isEdit ? 'Vertrag bearbeiten' : 'Neuer Vertrag'}
                         </h3>
-                        <form onSubmit={handleSubmit}>
+                        <form ref={formRef} onSubmit={handleSubmit}>
                             <div className="form-group">
                                 <label>Name *</label>
                                 <input type="text" value={form.name} onChange={e => handleChange('name', e.target.value)}
@@ -867,8 +900,9 @@
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Cashback</label>
-                                    <input type="text" maxLength="200" placeholder="z.B. 25 EUR via Check24"
-                                        value={form.cashback} onChange={e => handleChange('cashback', e.target.value)} />
+                                    <textarea maxLength="200" placeholder="z.B. 25 EUR via Check24" rows={1}
+                                        value={form.cashback} onChange={e => handleChange('cashback', e.target.value)}
+                                        onInput={e => autoResize(e.target)} style={{ overflow: 'hidden' }} />
                                 </div>
                                 <div className="form-group">
                                     <label>Geteilt mit (Personen)</label>
@@ -877,15 +911,30 @@
                                 </div>
                             </div>
 
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Kundennummer</label>
+                                    <input type="text" maxLength="100" placeholder="Optional"
+                                        value={form.customer_number} onChange={e => handleChange('customer_number', e.target.value)} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Vertragsnummer</label>
+                                    <input type="text" maxLength="100" placeholder="Optional"
+                                        value={form.contract_number} onChange={e => handleChange('contract_number', e.target.value)} />
+                                </div>
+                            </div>
+
                             <div className="form-group">
                                 <label>Beschreibung</label>
                                 <textarea value={form.description} onChange={e => handleChange('description', e.target.value)}
+                                          onInput={e => autoResize(e.target)} style={{ overflow: 'hidden' }}
                                           placeholder="Optionale Beschreibung..." rows={2} />
                             </div>
 
                             <div className="form-group">
                                 <label>Notizen</label>
                                 <textarea value={form.notes} onChange={e => handleChange('notes', e.target.value)}
+                                          onInput={e => autoResize(e.target)} style={{ overflow: 'hidden' }}
                                           placeholder="Optionale Notizen..." rows={2} />
                             </div>
 
@@ -911,6 +960,15 @@
                                 </div>
                             </div>
 
+                            {form.notify && (
+                                <div className="form-group">
+                                    <label>Warnzeitraum (Tage)</label>
+                                    <input type="number" value={form.cancel_warn_days}
+                                           onChange={e => handleChange('cancel_warn_days', e.target.value)}
+                                           min="1" max="365" />
+                                </div>
+                            )}
+
                             <div className="form-group">
                                 <label>Status</label>
                                 <select value={form.status} onChange={e => handleChange('status', e.target.value)}>
@@ -918,6 +976,26 @@
                                     <option value="cancelled">Gekuendigt</option>
                                 </select>
                             </div>
+
+                            {form.status === 'cancelled' && (
+                                <>
+                                    <div className="form-group">
+                                        <label>Gekuendigt am</label>
+                                        <input type="date" value={form.cancelled_at}
+                                               onChange={e => handleChange('cancelled_at', e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <label style={{ margin: 0 }}>Kuendigung bestaetigt</label>
+                                            <label className="toggle-switch">
+                                                <input type="checkbox" checked={form.cancellation_confirmed}
+                                                       onChange={e => handleChange('cancellation_confirmed', e.target.checked)} />
+                                                <span className="toggle-slider" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
 
                             {previewDates && (
                                 <div className="calculated-preview" style={{ marginBottom: 16 }}>
@@ -985,6 +1063,7 @@
             const [showExport, setShowExport] = useState(false);
             const [showChangelog, setShowChangelog] = useState(false);
             const [deleteConfirm, setDeleteConfirm] = useState(null); // null or {id, name}
+            const [deleteUserConfirm, setDeleteUserConfirm] = useState(false);
             const [isOnline, setIsOnline] = useState(navigator.onLine);
             const [isLoading, setIsLoading] = useState(true);
             const [version, setVersion] = useState('');
@@ -1172,6 +1251,29 @@
                 loadUsers();
             };
 
+            const handleDeleteUser = async () => {
+                try {
+                    await apiCall(`${API_BASE}/api/users/${encodeURIComponent(user)}`, {
+                        method: 'DELETE'
+                    });
+                    showToast('Account geloescht');
+                    localStorage.removeItem('contracts_session');
+                    localStorage.removeItem('contracts_user');
+                    setUser('');
+                    setUserId(null);
+                    setContracts([]);
+                    setStats(null);
+                    setView('login');
+                    setPasswordMode(null);
+                    setSelectedUser('');
+                    setDeleteUserConfirm(false);
+                    loadUsers();
+                } catch (e) {
+                    showToast(e.message || 'Fehler beim Loeschen', 'error');
+                    setDeleteUserConfirm(false);
+                }
+            };
+
             // ---- Contract handlers ----
             const handleSaveContract = async (formData) => {
                 try {
@@ -1219,8 +1321,11 @@
                     const s = filter.search.toLowerCase();
                     filtered = filtered.filter(c =>
                         c.name.toLowerCase().includes(s) ||
+                        c.category.toLowerCase().includes(s) ||
                         (c.description && c.description.toLowerCase().includes(s)) ||
-                        (c.notes && c.notes.toLowerCase().includes(s))
+                        (c.notes && c.notes.toLowerCase().includes(s)) ||
+                        (c.customer_number && c.customer_number.toLowerCase().includes(s)) ||
+                        (c.contract_number && c.contract_number.toLowerCase().includes(s))
                     );
                 }
                 if (filter.category) {
@@ -1248,6 +1353,10 @@
                         case 'category':
                             valA = a.category;
                             valB = b.category;
+                            break;
+                        case 'start_date':
+                            valA = a.start_date || '';
+                            valB = b.start_date || '';
                             break;
                         default:
                             valA = a.name.toLowerCase();
@@ -1295,8 +1404,9 @@
                 if (contract.status !== 'active' || !contract.notify) return 'ok';
                 const days = getDaysUntil(contract.cancellation_date);
                 if (days < 0) return 'ok'; // past cancellation date
-                if (days <= 30) return 'danger';
-                if (days <= 90) return 'warning';
+                const warnDays = contract.cancel_warn_days || 90;
+                if (days <= Math.ceil(warnDays / 3)) return 'danger';
+                if (days <= warnDays) return 'warning';
                 return 'ok';
             };
 
@@ -1306,7 +1416,7 @@
                 if (days < 0) return 'Abgelaufen';
                 if (days === 0) return 'Heute!';
                 if (days === 1) return 'Morgen!';
-                if (days <= 90) return `${days} Tage`;
+                if (days <= (contract.cancel_warn_days || 90)) return `${days} Tage`;
                 return formatDate(contract.cancellation_date);
             };
 
@@ -1314,7 +1424,7 @@
                 return contracts.filter(c => {
                     if (c.status !== 'active' || !c.notify) return false;
                     const days = getDaysUntil(c.cancellation_date);
-                    return days >= 0 && days <= 90;
+                    return days >= 0 && days <= (c.cancel_warn_days || 90);
                 }).sort((a, b) => getDaysUntil(a.cancellation_date) - getDaysUntil(b.cancellation_date));
             };
 
@@ -1484,6 +1594,10 @@
                                 <button className="btn btn-ghost" title="Export / Import" onClick={() => setShowExport(true)}>
                                     <IconDownload />
                                 </button>
+                                <button className="btn btn-ghost" title="Account loeschen" style={{ color: 'var(--danger)' }}
+                                        onClick={() => setDeleteUserConfirm(true)}>
+                                    <IconTrash />
+                                </button>
                                 <button className="btn btn-ghost" title="Abmelden" onClick={handleLogout}>
                                     <IconLogout />
                                 </button>
@@ -1521,11 +1635,12 @@
                                 <h3><IconAlertTriangle /> Kuendigungsfristen beachten!</h3>
                                 {urgentContracts.map(c => {
                                     const days = getDaysUntil(c.cancellation_date);
+                                    const warnDays = c.cancel_warn_days || 90;
                                     return (
                                         <div key={c.id} className="urgent-item">
                                             <strong>{c.name}</strong>
                                             {' \u2013 '}
-                                            <span className={`cancel-badge ${days <= 30 ? 'danger' : 'warning'}`}>
+                                            <span className={`cancel-badge ${days <= Math.ceil(warnDays / 3) ? 'danger' : 'warning'}`}>
                                                 {days === 0 ? 'Heute!' : days === 1 ? 'Morgen!' : `${days} Tage`}
                                             </span>
                                             <span className="text-3" style={{ marginLeft: 8, fontSize: 12 }}>
@@ -1586,6 +1701,9 @@
                                             <th onClick={() => toggleSort('category')}>
                                                 Kategorie <SortIndicator field="category" />
                                             </th>
+                                            <th onClick={() => toggleSort('start_date')}>
+                                                Startdatum <SortIndicator field="start_date" />
+                                            </th>
                                             <th onClick={() => toggleSort('monthly_cost')} style={{ textAlign: 'right' }}>
                                                 Mtl. Kosten <SortIndicator field="monthly_cost" />
                                             </th>
@@ -1603,9 +1721,17 @@
                                                 <tr key={c.id}>
                                                     <td>
                                                         <span style={{ fontWeight: 500 }}>{c.name}</span>
-                                                        {c.auto_renew ? <span className="text-xs text-3" style={{ marginLeft: 6 }} title="Auto-Verlaengerung">&#x21bb;</span> : null}
+                                                        {c.auto_renew && c.status !== 'cancelled' ? <span className="text-xs text-3" style={{ marginLeft: 6 }} title="Auto-Verlaengerung">&#x21bb;</span> : null}
+                                                        {(c.customer_number || c.contract_number) && (
+                                                            <div className="text-xs text-3">
+                                                                {c.customer_number && <span>KdNr. {c.customer_number}</span>}
+                                                                {c.customer_number && c.contract_number && <span> · </span>}
+                                                                {c.contract_number && <span>VNr. {c.contract_number}</span>}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td><span className="category-badge">{c.category}</span></td>
+                                                    <td>{formatDate(c.start_date)}</td>
                                                     <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                                                         <span style={{ fontWeight: 600 }}>{formatCost(c.monthly_cost)}</span>
                                                         <span className="text-3" style={{ fontSize: 11 }}>/mtl.</span>
@@ -1634,6 +1760,16 @@
                                                         <span className={`status-badge ${c.status}`}>
                                                             {c.status === 'active' ? 'Aktiv' : c.status === 'cancelled' ? 'Gekuendigt' : c.status}
                                                         </span>
+                                                        {c.status === 'cancelled' && c.cancelled_at && (
+                                                            <div className="text-xs text-3" style={{ marginTop: 3 }}>
+                                                                am {formatDate(c.cancelled_at)}
+                                                            </div>
+                                                        )}
+                                                        {c.status === 'cancelled' && !!c.cancellation_confirmed && (
+                                                            <div className="text-xs" style={{ color: 'var(--success)', marginTop: 2 }}>
+                                                                Bestaetigt
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td>
                                                         <div className="row" style={{ gap: 4, justifyContent: 'flex-end' }}>
@@ -1665,15 +1801,30 @@
                                                 <div>
                                                     <div className="contract-card-name">
                                                         {c.name}
-                                                        {c.auto_renew ? <span className="text-xs text-3" style={{ marginLeft: 6 }}>&#x21bb;</span> : null}
+                                                        {c.auto_renew && c.status !== 'cancelled' ? <span className="text-xs text-3" style={{ marginLeft: 6 }}>&#x21bb;</span> : null}
                                                     </div>
                                                     <span className="category-badge" style={{ marginTop: 4 }}>{c.category}</span>
                                                 </div>
-                                                <span className={`status-badge ${c.status}`}>
-                                                    {c.status === 'active' ? 'Aktiv' : 'Gekuendigt'}
-                                                </span>
+                                                <div>
+                                                    <span className={`status-badge ${c.status}`}>
+                                                        {c.status === 'active' ? 'Aktiv' : 'Gekuendigt'}
+                                                    </span>
+                                                    {c.status === 'cancelled' && c.cancelled_at && (
+                                                        <div className="text-xs text-3" style={{ marginTop: 3 }}>
+                                                            am {formatDate(c.cancelled_at)}
+                                                        </div>
+                                                    )}
+                                                    {c.status === 'cancelled' && !!c.cancellation_confirmed && (
+                                                        <div className="text-xs" style={{ color: 'var(--success)', marginTop: 2 }}>
+                                                            Bestaetigt
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="contract-card-details">
+                                                <span>Start: {formatDate(c.start_date)}</span>
+                                                {c.customer_number && <span>KdNr. {c.customer_number}</span>}
+                                                {c.contract_number && <span>VNr. {c.contract_number}</span>}
                                                 <span>
                                                     <strong>{formatCost(c.monthly_cost)}</strong> / Monat
                                                     {c.billing_interval && c.billing_interval !== 'monthly' && (
@@ -1762,6 +1913,14 @@
                             message={<span><strong>"{deleteConfirm.name}"</strong> wird unwiderruflich geloescht.</span>}
                             onConfirm={handleDeleteContract}
                             onCancel={() => setDeleteConfirm(null)}
+                        />
+                    )}
+
+                    {deleteUserConfirm && (
+                        <DeleteConfirmModal
+                            message={<span>Dein Account <strong>"{user}"</strong> und alle {contracts.length} Vertraege werden unwiderruflich geloescht.</span>}
+                            onConfirm={handleDeleteUser}
+                            onCancel={() => setDeleteUserConfirm(false)}
                         />
                     )}
 

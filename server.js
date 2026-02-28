@@ -209,6 +209,17 @@ function validateContract(body) {
         return 'Status: active, cancelled oder expired';
     if (body.split_count !== undefined && (!Number.isInteger(body.split_count) || body.split_count < 1 || body.split_count > 20))
         return 'Geteilt mit: 1-20 Personen';
+    if (body.cancel_warn_days !== undefined && body.cancel_warn_days !== null && (!Number.isInteger(body.cancel_warn_days) || body.cancel_warn_days < 1 || body.cancel_warn_days > 365))
+        return 'Kuendigungswarnung: 1-365 Tage';
+    if (body.cancelled_at !== undefined && body.cancelled_at !== null &&
+        (typeof body.cancelled_at !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.cancelled_at) || isNaN(Date.parse(body.cancelled_at))))
+        return 'Kuendigungsdatum: ungueltiges Format (YYYY-MM-DD)';
+    if (body.customer_number !== undefined && body.customer_number !== null &&
+        (typeof body.customer_number !== 'string' || body.customer_number.length > 100))
+        return 'Kundennummer: maximal 100 Zeichen';
+    if (body.contract_number !== undefined && body.contract_number !== null &&
+        (typeof body.contract_number !== 'string' || body.contract_number.length > 100))
+        return 'Vertragsnummer: maximal 100 Zeichen';
     return null;
 }
 
@@ -275,6 +286,11 @@ db.exec(`
         auto_renew INTEGER DEFAULT 1,
         notify INTEGER DEFAULT 1,
         split_count INTEGER DEFAULT 1,
+        cancel_warn_days INTEGER DEFAULT 90,
+        cancelled_at TEXT,
+        cancellation_confirmed INTEGER DEFAULT 0,
+        customer_number TEXT,
+        contract_number TEXT,
         notes TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -305,6 +321,21 @@ if (!cols.includes('notify')) {
 if (!cols.includes('split_count')) {
     db.exec("ALTER TABLE contracts ADD COLUMN split_count INTEGER DEFAULT 1");
 }
+if (!cols.includes('cancel_warn_days')) {
+    db.exec("ALTER TABLE contracts ADD COLUMN cancel_warn_days INTEGER DEFAULT 90");
+}
+if (!cols.includes('cancelled_at')) {
+    db.exec("ALTER TABLE contracts ADD COLUMN cancelled_at TEXT");
+}
+if (!cols.includes('cancellation_confirmed')) {
+    db.exec("ALTER TABLE contracts ADD COLUMN cancellation_confirmed INTEGER DEFAULT 0");
+}
+if (!cols.includes('customer_number')) {
+    db.exec("ALTER TABLE contracts ADD COLUMN customer_number TEXT");
+}
+if (!cols.includes('contract_number')) {
+    db.exec("ALTER TABLE contracts ADD COLUMN contract_number TEXT");
+}
 
 // ============================================================================
 // PREPARED STATEMENTS
@@ -328,14 +359,17 @@ const stmts = {
     insertContract: db.prepare(`
         INSERT INTO contracts (user_id, name, category, start_date, duration_months,
             cancellation_period_months, cancellation_date, end_date, cost, billing_interval,
-            monthly_cost, cashback, description, status, auto_renew, notify, split_count, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            monthly_cost, cashback, description, status, auto_renew, notify, split_count,
+            cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
     updateContract: db.prepare(`
         UPDATE contracts SET name=?, category=?, start_date=?, duration_months=?,
             cancellation_period_months=?, cancellation_date=?, end_date=?, cost=?,
             billing_interval=?, monthly_cost=?, cashback=?, description=?, status=?,
-            auto_renew=?, notify=?, split_count=?, notes=?, updated_at=CURRENT_TIMESTAMP
+            auto_renew=?, notify=?, split_count=?, cancel_warn_days=?,
+            cancelled_at=?, cancellation_confirmed=?, customer_number=?, contract_number=?,
+            notes=?, updated_at=CURRENT_TIMESTAMP
         WHERE id=? AND user_id=?
     `),
     deleteContract: db.prepare('DELETE FROM contracts WHERE id = ? AND user_id = ?'),
@@ -615,11 +649,17 @@ app.post('/api/contracts', validateApiKey, validateSession, (req, res) => {
         if (validationErr) return res.status(400).json({ error: validationErr });
 
         const { name, category, start_date, duration_months, cancellation_period_months, cost,
-                billing_interval, cashback, description, status, auto_renew, notify, split_count, notes } = req.body;
+                billing_interval, cashback, description, status, auto_renew, notify, split_count,
+                cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number, notes } = req.body;
 
         const autoRenew = auto_renew !== undefined ? (auto_renew ? 1 : 0) : 1;
         const notifyFlag = notify !== undefined ? (notify ? 1 : 0) : 1;
         const splitCount = split_count !== undefined ? split_count : 1;
+        const warnDays = cancel_warn_days !== undefined ? cancel_warn_days : 90;
+        const cancelledAt = cancelled_at || null;
+        const cancelConfirmed = cancellation_confirmed ? 1 : 0;
+        const customerNumber = customer_number || null;
+        const contractNumber = contract_number || null;
         const interval = billing_interval || 'monthly';
         const monthlyCost = calculateMonthlyCost(cost, interval);
         const contractStatus = status || 'active';
@@ -643,6 +683,11 @@ app.post('/api/contracts', validateApiKey, validateSession, (req, res) => {
             autoRenew,
             notifyFlag,
             splitCount,
+            warnDays,
+            cancelledAt,
+            cancelConfirmed,
+            customerNumber,
+            contractNumber,
             notes || null
         );
 
@@ -663,11 +708,17 @@ app.put('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
         if (validationErr) return res.status(400).json({ error: validationErr });
 
         const { name, category, start_date, duration_months, cancellation_period_months, cost,
-                billing_interval, cashback, description, status, auto_renew, notify, split_count, notes } = req.body;
+                billing_interval, cashback, description, status, auto_renew, notify, split_count,
+                cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number, notes } = req.body;
 
         const autoRenew = auto_renew !== undefined ? (auto_renew ? 1 : 0) : 1;
         const notifyFlag = notify !== undefined ? (notify ? 1 : 0) : 1;
         const splitCount = split_count !== undefined ? split_count : 1;
+        const warnDays = cancel_warn_days !== undefined ? cancel_warn_days : 90;
+        const cancelledAt = cancelled_at || null;
+        const cancelConfirmed = cancellation_confirmed ? 1 : 0;
+        const customerNumber = customer_number || null;
+        const contractNumber = contract_number || null;
         const interval = billing_interval || 'monthly';
         const monthlyCost = calculateMonthlyCost(cost, interval);
         const contractStatus = status || 'active';
@@ -690,6 +741,11 @@ app.put('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
             autoRenew,
             notifyFlag,
             splitCount,
+            warnDays,
+            cancelledAt,
+            cancelConfirmed,
+            customerNumber,
+            contractNumber,
             notes || null,
             req.params.id,
             req.sessionUserId
@@ -737,7 +793,7 @@ app.get('/api/export/csv', validateApiKey, validateSession, (req, res) => {
     try {
         const rows = stmts.exportContracts.all(req.sessionUserId);
         const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const header = 'Name;Kategorie;Startdatum;Laufzeit (Monate);Kuendigungsfrist (Monate);Kuendigungsdatum;Enddatum;Kosten;Zahlungsintervall;Monatliche Kosten;Cashback;Geteilt mit;Beschreibung;Status;Auto-Verlaengerung;Kuendigungswarnung;Notizen\n';
+        const header = 'Name;Kategorie;Startdatum;Laufzeit (Monate);Kuendigungsfrist (Monate);Kuendigungsdatum;Enddatum;Kosten;Zahlungsintervall;Monatliche Kosten;Cashback;Geteilt mit;Beschreibung;Status;Auto-Verlaengerung;Kuendigungswarnung;Warnzeitraum (Tage);Gekuendigt am;Kuendigung bestaetigt;Kundennummer;Vertragsnummer;Notizen\n';
         const body = rows.map(r =>
             [esc(r.name), esc(r.category), r.start_date, r.duration_months,
              r.cancellation_period_months, r.cancellation_date, r.end_date,
@@ -749,6 +805,11 @@ app.get('/api/export/csv', validateApiKey, validateSession, (req, res) => {
              esc(r.description), esc(r.status),
              r.auto_renew ? 'Ja' : 'Nein',
              r.notify ? 'Ja' : 'Nein',
+             r.cancel_warn_days || 90,
+             esc(r.cancelled_at),
+             r.cancellation_confirmed ? 'Ja' : 'Nein',
+             esc(r.customer_number),
+             esc(r.contract_number),
              esc(r.notes)].join(';')
         ).join('\n');
         const safeName = sanitizeFilename(req.sessionUser);
@@ -777,6 +838,11 @@ const importContracts = db.transaction((userId, contracts) => {
         const autoRenew = c.auto_renew !== undefined ? (c.auto_renew ? 1 : 0) : 1;
         const notifyFlag = c.notify !== undefined ? (c.notify ? 1 : 0) : 1;
         const splitCount = c.split_count !== undefined ? c.split_count : 1;
+        const warnDays = c.cancel_warn_days !== undefined ? c.cancel_warn_days : 90;
+        const cancelledAt = c.cancelled_at || null;
+        const cancelConfirmed = c.cancellation_confirmed ? 1 : 0;
+        const customerNumber = c.customer_number || null;
+        const contractNumber = c.contract_number || null;
         const interval = c.billing_interval || 'monthly';
         const monthlyCost = calculateMonthlyCost(c.cost, interval);
         const contractStatus = c.status || 'active';
@@ -800,6 +866,11 @@ const importContracts = db.transaction((userId, contracts) => {
             autoRenew,
             notifyFlag,
             splitCount,
+            warnDays,
+            cancelledAt,
+            cancelConfirmed,
+            customerNumber,
+            contractNumber,
             c.notes || null
         );
         count++;
