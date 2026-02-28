@@ -752,14 +752,14 @@
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <label style={{ margin: 0, fontSize: 14 }}>Kosten nach Kategorie</label>
                                 <label className="toggle-switch">
-                                    <input type="checkbox" checked={showCategoryStats} onChange={e => onToggleCategoryStats(e.target.checked)} />
+                                    <input type="checkbox" checked={showCategoryStats} onChange={e => { onToggleCategoryStats(e.target.checked); showToast('Einstellung gespeichert'); }} />
                                     <span className="toggle-slider" />
                                 </label>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <label style={{ margin: 0, fontSize: 14 }}>Abgelaufene Verträge ausblenden</label>
                                 <label className="toggle-switch">
-                                    <input type="checkbox" checked={hideExpiredCancelled} onChange={e => onToggleHideExpiredCancelled(e.target.checked)} />
+                                    <input type="checkbox" checked={hideExpiredCancelled} onChange={e => { onToggleHideExpiredCancelled(e.target.checked); showToast('Einstellung gespeichert'); }} />
                                     <span className="toggle-slider" />
                                 </label>
                             </div>
@@ -1132,6 +1132,7 @@
             const [deleteConfirm, setDeleteConfirm] = useState(null); // null or {id, name}
             const [showCategoryStats, setShowCategoryStats] = useState(() => localStorage.getItem('contracts_showCategoryStats') !== 'false');
             const [hideExpiredCancelled, setHideExpiredCancelled] = useState(() => localStorage.getItem('contracts_hideExpiredCancelled') !== 'false');
+            const [showExpiredSection, setShowExpiredSection] = useState(false);
             const [isOnline, setIsOnline] = useState(navigator.onLine);
             const [isLoading, setIsLoading] = useState(true);
             const [version, setVersion] = useState('');
@@ -1364,7 +1365,14 @@
 
                 if (hideExpiredCancelled && !filter.status) {
                     const today = new Date().toISOString().split('T')[0];
-                    filtered = filtered.filter(c => !(c.status === 'cancelled' && c.end_date && c.end_date < today));
+                    filtered = filtered.filter(c => {
+                        if (c.status === 'expired') return false;
+                        if (c.status === 'cancelled') {
+                            if (c.end_date && c.end_date < today) return false;
+                            if (c.cancellation_date && c.cancellation_date < today) return false;
+                        }
+                        return true;
+                    });
                 }
 
                 if (filter.search) {
@@ -1623,6 +1631,20 @@
             const urgentContracts = getUrgentContracts();
             const activeCount = getActiveCount();
             const usedCategories = [...new Set(contracts.map(c => c.category))];
+
+            const getExpiredContracts = () => {
+                if (!hideExpiredCancelled || filter.status) return [];
+                const today = new Date().toISOString().split('T')[0];
+                return contracts.filter(c => {
+                    if (c.status === 'expired') return true;
+                    if (c.status === 'cancelled') {
+                        if (c.end_date && c.end_date < today) return true;
+                        if (c.cancellation_date && c.cancellation_date < today) return true;
+                    }
+                    return false;
+                });
+            };
+            const expiredContracts = getExpiredContracts();
 
             return (
                 <div className="page">
@@ -1924,6 +1946,147 @@
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Expired/Cancelled Contracts Section */}
+                        {expiredContracts.length > 0 && (
+                            <div style={{ marginTop: 24, opacity: 0.7 }}>
+                                <h3
+                                    className="fw-6 text-2"
+                                    style={{ fontSize: 14, marginBottom: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, userSelect: 'none' }}
+                                    onClick={() => setShowExpiredSection(prev => !prev)}
+                                >
+                                    <span style={{ display: 'inline-block', transition: 'transform 0.2s', transform: showExpiredSection ? 'rotate(90deg)' : 'rotate(0deg)', fontSize: 12 }}>▶</span>
+                                    Abgelaufene Verträge ({expiredContracts.length})
+                                </h3>
+                                {showExpiredSection && (
+                                    <>
+                                        <div className="desktop-table">
+                                            <table>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Name</th>
+                                                        <th>Kategorie</th>
+                                                        <th>Start</th>
+                                                        <th style={{ textAlign: 'right' }}>Kosten</th>
+                                                        <th>Kündigung</th>
+                                                        <th>Status</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {expiredContracts.map(c => (
+                                                        <tr key={c.id}>
+                                                            <td>
+                                                                <div style={{ fontWeight: 600 }}>{c.name}</div>
+                                                                {c.customer_number && <div className="text-xs text-3">KdNr. {c.customer_number}</div>}
+                                                                {c.contract_number && <div className="text-xs text-3">VNr. {c.contract_number}</div>}
+                                                            </td>
+                                                            <td><span className="category-badge">{c.category}</span></td>
+                                                            <td>{formatDate(c.start_date)}</td>
+                                                            <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                                                <span style={{ fontWeight: 600 }}>{formatCost(c.monthly_cost)}</span>
+                                                                <span className="text-3" style={{ fontSize: 11 }}>/mtl.</span>
+                                                                {c.billing_interval && c.billing_interval !== 'monthly' && (
+                                                                    <div className="text-3" style={{ fontSize: 11 }}>
+                                                                        ({formatCost(c.cost)}/{c.billing_interval === 'quarterly' ? 'Quartal' : c.billing_interval === 'semi-annual' ? 'Halbjahr' : 'Jahr'})
+                                                                    </div>
+                                                                )}
+                                                                {c.split_count > 1 && (
+                                                                    <div className="text-3" style={{ fontSize: 11 }}>
+                                                                        1/{c.split_count} = {formatCost(c.monthly_cost / c.split_count)}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                            <td>{formatDate(c.cancellation_date)}</td>
+                                                            <td>
+                                                                <span className={`status-badge ${c.status}`}>
+                                                                    {c.status === 'expired' ? 'Abgelaufen' : 'Gekündigt'}
+                                                                </span>
+                                                                {c.status === 'cancelled' && c.cancelled_at && (
+                                                                    <div className="text-xs text-3" style={{ marginTop: 3 }}>
+                                                                        am {formatDate(c.cancelled_at)}
+                                                                    </div>
+                                                                )}
+                                                                {c.status === 'cancelled' && !!c.cancellation_confirmed && (
+                                                                    <div className="text-xs" style={{ color: 'var(--success)', marginTop: 2 }}>
+                                                                        Bestätigt
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                <div className="row" style={{ gap: 4, justifyContent: 'flex-end' }}>
+                                                                    <button className="btn btn-ghost" title="Bearbeiten" onClick={() => setEditContract(c)}>
+                                                                        <IconEdit />
+                                                                    </button>
+                                                                    <button className="btn btn-ghost" title="Löschen" style={{ color: 'var(--danger)' }}
+                                                                            onClick={() => setDeleteConfirm({ id: c.id, name: c.name })}>
+                                                                        <IconTrash />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="mobile-cards">
+                                            {expiredContracts.map(c => (
+                                                <div key={c.id} className="contract-card">
+                                                    <div className="contract-card-header">
+                                                        <div>
+                                                            <div className="contract-card-name">{c.name}</div>
+                                                            <span className="category-badge" style={{ marginTop: 4 }}>{c.category}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className={`status-badge ${c.status}`}>
+                                                                {c.status === 'expired' ? 'Abgelaufen' : 'Gekündigt'}
+                                                            </span>
+                                                            {c.status === 'cancelled' && c.cancelled_at && (
+                                                                <div className="text-xs text-3" style={{ marginTop: 3 }}>
+                                                                    am {formatDate(c.cancelled_at)}
+                                                                </div>
+                                                            )}
+                                                            {c.status === 'cancelled' && !!c.cancellation_confirmed && (
+                                                                <div className="text-xs" style={{ color: 'var(--success)', marginTop: 2 }}>
+                                                                    Bestätigt
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="contract-card-details">
+                                                        <span>Start: {formatDate(c.start_date)}</span>
+                                                        {c.customer_number && <span>KdNr. {c.customer_number}</span>}
+                                                        {c.contract_number && <span>VNr. {c.contract_number}</span>}
+                                                        <span>
+                                                            <strong>{formatCost(c.monthly_cost)}</strong> / Monat
+                                                            {c.billing_interval && c.billing_interval !== 'monthly' && (
+                                                                <span className="text-3" style={{ fontSize: 11, marginLeft: 4 }}>
+                                                                    ({formatCost(c.cost)}/{c.billing_interval === 'quarterly' ? 'Q' : c.billing_interval === 'semi-annual' ? 'HJ' : 'J'})
+                                                                </span>
+                                                            )}
+                                                            {c.split_count > 1 && (
+                                                                <span className="text-3" style={{ fontSize: 11, marginLeft: 4 }}>
+                                                                    (1/{c.split_count})
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                        <span>Kündigung: {formatDate(c.cancellation_date)}</span>
+                                                    </div>
+                                                    <div className="contract-card-actions">
+                                                        <button className="btn btn-sm btn-secondary" onClick={() => setEditContract(c)}>
+                                                            <IconEdit /> Bearbeiten
+                                                        </button>
+                                                        <button className="btn btn-sm btn-danger" onClick={() => setDeleteConfirm({ id: c.id, name: c.name })}>
+                                                            <IconTrash />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
 

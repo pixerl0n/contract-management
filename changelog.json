@@ -1,43 +1,19 @@
 [
     {
-        "version": "1.1.4",
+        "version": "1.1.6",
         "date": "2026-02-28",
-        "type": "patch",
+        "type": "minor",
         "changes": [
-            "Session: Gueltigkeitsdauer von 30 auf 90 Tage erhoeht",
-            "Uebersicht: 'Verlaengert sich' statt 'Abgelaufen' bei aktiven Auto-Verlaengerungs-Vertraegen"
-        ]
-    },
-    {
-        "version": "1.1.3",
-        "date": "2026-02-28",
-        "type": "patch",
-        "changes": [
-            "Einstellungen: Export/Import und Account-Verwaltung in einem Modal zusammengefasst",
-            "Navigation: Zahnrad-Icon statt separater Buttons für Export und Account-Löschen",
-            "Favicon: Neues Dokument-Icon mit Umgebungsfarben statt Buchstaben",
-            "UI-Texte: Deutsche Umlaute (ä, ö, ü, ß) in allen Dateien"
-        ]
-    },
-    {
-        "version": "1.1.2",
-        "date": "2026-02-28",
-        "type": "patch",
-        "changes": [
-            "Vertragsnummer: Optionales Feld pro Vertrag (max 100 Zeichen)",
-            "Suche: Vertragsnummer wird jetzt durchsucht",
-            "Übersicht: Auto-Verlängerung-Symbol bei gekündigten Verträgen ausgeblendet"
-        ]
-    },
-    {
-        "version": "1.1.1",
-        "date": "2026-02-28",
-        "type": "patch",
-        "changes": [
+            "Abgelaufene Verträge: Eigener aufklappbarer Bereich statt Ausblenden",
+            "Einstellungen: Toggle für abgelaufene Verträge mit Speicher-Feedback",
             "Kündigungstracking: Datum und Bestätigung bei gekündigten Verträgen erfassen",
-            "Kundennummer: Optionales Feld pro Vertrag (max 100 Zeichen)",
-            "Suche: Kategorie und Kundennummer werden jetzt durchsucht",
-            "Formular: Textfelder (Cashback, Beschreibung, Notizen) wachsen automatisch mit dem Inhalt"
+            "Kundennummer und Vertragsnummer: Optionale Felder pro Vertrag",
+            "Suche: Kategorie, Kunden- und Vertragsnummer werden durchsucht",
+            "Einstellungen: Export/Import und Account-Verwaltung in einem Modal",
+            "Favicon: Dokument-Icon mit Umgebungsfarben",
+            "Session: Gültigkeitsdauer von 30 auf 90 Tage erhöht",
+            "Formular: Textfelder wachsen automatisch mit dem Inhalt",
+            "UI-Texte: Deutsche Umlaute in allen Dateien"
         ]
     },
     {
