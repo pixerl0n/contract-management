@@ -1,5 +1,14 @@
 [
     {
+        "version": "1.2.1",
+        "date": "2026-03-01",
+        "type": "patch",
+        "changes": [
+            "Frontend komplett auf Vanilla JS umgestellt (React, ReactDOM und Babel entfernt)",
+            "Keine CDN-Abhängigkeiten mehr (schnellerer Seitenaufbau, offline-fähiger)"
+        ]
+    },
+    {
         "version": "1.2.0a",
         "date": "2026-03-01",
         "type": "patch",
