@@ -13,7 +13,7 @@ Jeder Push triggert GitHub Actions: Docker-Image Build + Push zu GHCR.
 ### 1. DEV pushen
 
 ```bash
-git add -A && git commit -m "v1.1.7" && git push origin dev
+git add -A && git commit -m "v1.2.0" && git push origin dev
 ```
 
 ### 2. DEV → TEST mergen und pushen
