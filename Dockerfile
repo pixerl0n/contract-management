@@ -5,7 +5,7 @@ RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-# Dependencies zuerst (Layer-Caching)
+# Dependencies zuerst (Layer-Caching: nur neu bauen wenn package*.json geändert)
 COPY package*.json ./
 RUN npm ci --omit=dev
 
