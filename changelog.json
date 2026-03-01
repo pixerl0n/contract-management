@@ -1,5 +1,14 @@
 [
     {
+        "version": "1.2.0a",
+        "date": "2026-03-01",
+        "type": "patch",
+        "changes": [
+            "Mobile: Version, Stage-Badge und Datum unter den Titel verschoben (besseres Layout auf iPhone)",
+            "Infrastruktur: Alle Konfigurations- und Deployment-Dateien projektübergreifend vereinheitlicht"
+        ]
+    },
+    {
         "version": "1.2.0",
         "date": "2026-02-28",
         "type": "minor",
