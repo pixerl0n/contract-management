@@ -159,6 +159,8 @@
         }
         .nav-inner { max-width: 960px; margin: 0 auto;
                      display: flex; align-items: center; justify-content: space-between; }
+        .nav-left { display: flex; align-items: center; gap: 10px; }
+        .nav-meta { display: flex; align-items: center; gap: 6px; }
         .nav-title { font-weight: 700; font-size: 17px; letter-spacing: -.02em; }
 
         /* -- Badge -- */
@@ -444,6 +446,7 @@
             .filter-bar input, .filter-bar select { width: 100%; }
             .form-row { grid-template-columns: 1fr; }
             input[type="text"], input[type="number"], input[type="date"], textarea, select { font-size: 16px; }
+            .nav-left { flex-direction: column; align-items: flex-start; gap: 2px; }
         }
 
         @media (max-width: 640px) {
@@ -1792,10 +1795,12 @@
                     {/* Sticky Nav */}
                     <nav className="nav">
                         <div className="nav-inner">
-                            <div className="row" style={{ gap: 10 }}>
+                            <div className="nav-left">
                                 <span className="nav-title">Vertragsmanagement</span>
-                                {version && <span className="text-xs text-3" style={{ cursor: 'pointer', textDecoration: 'underline dotted' }} onClick={() => setShowChangelog(true)} title="Changelog">v{version}</span>}
-                                <EnvBadge />
+                                <span className="nav-meta">
+                                    {version && <span className="text-xs text-3" style={{ cursor: 'pointer', textDecoration: 'underline dotted' }} onClick={() => setShowChangelog(true)} title="Changelog">v{version}</span>}
+                                    <EnvBadge />
+                                </span>
                             </div>
                             <div className="row" style={{ gap: 4 }}>
                                 <span className="text-xs text-3" style={{ marginRight: 4 }}>{new Date().toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
