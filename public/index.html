@@ -527,8 +527,6 @@
         // ============ API LAYER ============
         async function apiCall(endpoint, options = {}) {
             const headers = { 'Content-Type': 'application/json', 'x-api-key': API_KEY, ...options.headers };
-            const sessionToken = localStorage.getItem('contracts_session');
-            if (sessionToken) headers['x-session-token'] = sessionToken;
             const response = await fetch(endpoint, { ...options, headers, credentials: 'include' });
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
@@ -902,9 +900,7 @@
         }
 
         async function handleLogout() {
-            const token = localStorage.getItem('contracts_session');
-            if (token) { try { await apiCall(`${API_BASE}/api/auth/logout`, { method: 'POST', body: JSON.stringify({ token }) }); } catch (_) {} }
-            localStorage.removeItem('contracts_session');
+            try { await apiCall(`${API_BASE}/api/auth/logout`, { method: 'POST' }); } catch (_) {}
             localStorage.removeItem('contracts_user');
             state.user = ''; state.userId = null; state.contracts = []; state.stats = null;
             state.view = 'login'; state.passwordMode = null; state.selectedUser = '';
@@ -2127,7 +2123,6 @@
             try {
                 await apiCall(`${API_BASE}/api/users/${encodeURIComponent(state.user)}`, { method: 'DELETE' });
                 showToast('Account gel\u00f6scht');
-                localStorage.removeItem('contracts_session');
                 localStorage.removeItem('contracts_user');
                 state.user = ''; state.userId = null; state.contracts = []; state.stats = null;
                 state.view = 'login'; state.passwordMode = null; state.selectedUser = '';
@@ -2153,27 +2148,21 @@
             try { const r = await fetch(`${API_BASE}/api/categories`); state.categories = await r.json(); } catch (_) {}
             try { const r = await fetch(`${API_BASE}/api/version`); const d = await r.json(); state.version = d.version; } catch (_) {}
 
-            // Auto-login
-            const savedToken = localStorage.getItem('contracts_session');
-            if (savedToken) {
-                try {
-                    const r = await apiCall(`${API_BASE}/api/auth/verify`, {
-                        method: 'POST', body: JSON.stringify({ token: savedToken })
-                    });
-                    const data = await r.json();
-                    if (data.success && data.user) {
-                        localStorage.setItem('contracts_user', data.user);
-                        state.user = data.user;
-                        state.userId = data.userId;
-                        state.view = 'dashboard';
-                        render();
-                        loadContracts();
-                        loadGroups();
-                        return;
-                    }
-                } catch (_) {}
-                localStorage.removeItem('contracts_session');
-            }
+            // Auto-login (cookie sent automatically via credentials: 'include')
+            try {
+                const r = await apiCall(`${API_BASE}/api/auth/verify`, { method: 'POST' });
+                const data = await r.json();
+                if (data.success && data.user) {
+                    localStorage.setItem('contracts_user', data.user);
+                    state.user = data.user;
+                    state.userId = data.userId;
+                    state.view = 'dashboard';
+                    render();
+                    loadContracts();
+                    loadGroups();
+                    return;
+                }
+            } catch (_) {}
             await loadUsers();
             state.view = 'login';
             render();

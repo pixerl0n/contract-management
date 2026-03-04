@@ -1,22 +1,13 @@
 [
     {
-        "version": "1.3.1",
-        "date": "2026-03-04",
-        "type": "patch",
-        "changes": [
-            "Login: SSO-Status-Badge zeigt Erreichbarkeit des Auth-Service (gruen/rot)",
-            "Security: AUTH_MODE wird im Frontend escaped"
-        ]
-    },
-    {
-        "version": "1.3.0",
+        "version": "1.4.0",
         "date": "2026-03-04",
         "type": "minor",
         "changes": [
-            "SSO-Integration: Zentrale Authentifizierung über Auth-Service (Cookie-basiert)",
-            "Dual-Mode: Standalone (lokal) oder SSO je nach Konfiguration",
-            "Auth-Modus wird in Einstellungen und Version-Endpoint angezeigt",
-            "Automatisches ID-Mapping zwischen Auth-Service und lokaler Datenbank"
+            "SSO: Zentrale Authentifizierung ueber Auth-Service (Cookie-basiert, Standalone-Modus bleibt aktiv)",
+            "Login: SSO-Status-Badge zeigt Erreichbarkeit des Auth-Service",
+            "Einstellungen: Auth-Modus (SSO/Standalone) wird angezeigt",
+            "Security: AUTH_MODE wird im Frontend escaped"
         ]
     },
     {
@@ -25,16 +16,9 @@
         "type": "patch",
         "changes": [
             "Frontend komplett auf Vanilla JS umgestellt (React, ReactDOM und Babel entfernt)",
-            "Keine CDN-Abhängigkeiten mehr (schnellerer Seitenaufbau, offline-fähiger)"
-        ]
-    },
-    {
-        "version": "1.2.0a",
-        "date": "2026-03-01",
-        "type": "patch",
-        "changes": [
+            "Keine CDN-Abhaengigkeiten mehr (schnellerer Seitenaufbau, offline-faehiger)",
             "Mobile: Version, Stage-Badge und Datum unter den Titel verschoben (besseres Layout auf iPhone)",
-            "Infrastruktur: Alle Konfigurations- und Deployment-Dateien projektübergreifend vereinheitlicht"
+            "Infrastruktur: Alle Konfigurations- und Deployment-Dateien projektubergreifend vereinheitlicht"
         ]
     },
     {
@@ -42,42 +26,13 @@
         "date": "2026-02-28",
         "type": "minor",
         "changes": [
-            "Vertragsgruppen: Verträge aus verschiedenen Kategorien zu eigenen Gruppen zusammenfassen (z.B. Wohnung)",
-            "Vertragsgruppen: Aggregierte Kostenübersicht pro Gruppe (monatlich/jährlich)",
-            "Vertragsgruppen: Farbiges Badge und Filter in der Vertragsliste",
-            "Vertragsgruppen: Verwaltung (erstellen, bearbeiten, löschen) in den Einstellungen",
-            "Vertragsgruppen: Maximal 10 Gruppen pro Benutzer mit individueller Farbe"
-        ]
-    },
-    {
-        "version": "1.1.7",
-        "date": "2026-02-28",
-        "type": "patch",
-        "changes": [
-            "Abgelaufene Verträge: Eigener aufklappbarer Bereich mit vollständiger Tabelle",
-            "Kündigungsdatum: Manuelles Überschreiben des berechneten Datums möglich",
-            "Anzeige: Aktuelles Datum in der Navigationsleiste",
-            "Anzeige: Deutsche Zahlenformatierung (Komma statt Punkt, € statt EUR)",
-            "Tabelle: Feste Spaltenbreiten für einheitliches Layout",
-            "Kategorie: Verein/Mitgliedschaft zu Verein gekürzt",
-            "Einstellungen: Toast-Feedback beim Ändern von Optionen"
-        ]
-    },
-    {
-        "version": "1.1.6",
-        "date": "2026-02-28",
-        "type": "minor",
-        "changes": [
-            "Abgelaufene Verträge: Eigener aufklappbarer Bereich statt Ausblenden",
-            "Einstellungen: Toggle für abgelaufene Verträge mit Speicher-Feedback",
-            "Kündigungstracking: Datum und Bestätigung bei gekündigten Verträgen erfassen",
-            "Kundennummer und Vertragsnummer: Optionale Felder pro Vertrag",
-            "Suche: Kategorie, Kunden- und Vertragsnummer werden durchsucht",
-            "Einstellungen: Export/Import und Account-Verwaltung in einem Modal",
-            "Favicon: Dokument-Icon mit Umgebungsfarben",
-            "Session: Gültigkeitsdauer von 30 auf 90 Tage erhöht",
-            "Formular: Textfelder wachsen automatisch mit dem Inhalt",
-            "UI-Texte: Deutsche Umlaute in allen Dateien"
+            "Vertragsgruppen: Vertraege gruppieren mit aggregierter Kostenuebersicht und Farbfiltern",
+            "Abgelaufene Vertraege: Eigener aufklappbarer Bereich mit vollstaendiger Tabelle",
+            "Kuendigungstracking: Datum, Bestaetigung und manuelles Ueberschreiben moeglich",
+            "Kundennummer und Vertragsnummer: Optionale Felder pro Vertrag, durchsuchbar",
+            "Einstellungen: Export/Import, Account-Verwaltung, Toggle fuer abgelaufene Vertraege",
+            "UI: Deutsche Zahlenformatierung, feste Spaltenbreiten, automatisch wachsende Textfelder",
+            "Favicon: Dokument-Icon mit Umgebungsfarben, Session 90 Tage"
         ]
     },
     {
