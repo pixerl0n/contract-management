@@ -11,12 +11,21 @@ services:
       - NODE_ENV=development
       - PORT=3000
       - API_KEY=${API_KEY:-}
+      - AUTH_SERVICE_URL=http://auth:3000
+      - COOKIE_DOMAIN=
     volumes:
       - contracts-data:/app/data
       - ./server.js:/app/server.js
       - ./public:/app/public
     user: "1000:1000"
+    networks:
+      - default
+      - auth-net
 
 volumes:
   contracts-data:
     name: contracts-app-dev-local-data
+
+networks:
+  auth-net:
+    name: auth-net
