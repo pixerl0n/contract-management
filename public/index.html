@@ -529,7 +529,7 @@
             const headers = { 'Content-Type': 'application/json', 'x-api-key': API_KEY, ...options.headers };
             const sessionToken = localStorage.getItem('contracts_session');
             if (sessionToken) headers['x-session-token'] = sessionToken;
-            const response = await fetch(endpoint, { ...options, headers });
+            const response = await fetch(endpoint, { ...options, headers, credentials: 'include' });
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
                 throw new Error(data.error || 'Anfrage fehlgeschlagen');
@@ -818,18 +818,16 @@
             render();
         }
 
-        function handleNewUser(name) {
-            if (!name || !name.trim()) return;
+        async function handleNewUser(name, password) {
+            if (!name || !name.trim()) return showToast('Name eingeben', 'error');
             const n = name.trim();
+            if (!password || password.length < 4) return showToast('Passwort: mindestens 4 Zeichen', 'error');
             if (state.users.find(u => u.name === n)) {
                 showToast('Benutzer existiert bereits', 'error');
                 return;
             }
             state.selectedUser = n;
-            state.showPw = false;
-            _pwLocal = ''; _pw2Local = '';
-            state.passwordMode = 'register';
-            render();
+            await handleRegister(password);
         }
 
         async function handleLogin(password) {
@@ -1075,7 +1073,7 @@
                         </button>
                     </div>
                     ${needsConfirm ? `<div class="pw-field">
-                        <input type="${state.showPw ? 'text' : 'password'}" data-field="pw2" value="${escapeHtml(_pw2Local)}" placeholder="Passwort bestaetigen" id="pw2-input">
+                        <input type="${state.showPw ? 'text' : 'password'}" data-field="pw2" value="${escapeHtml(_pw2Local)}" placeholder="Passwort best\u00e4tigen" id="pw2-input">
                     </div>` : ''}
                     <button class="btn btn-primary btn-full" data-action="submit-password" ${_pwBusy ? 'disabled' : ''} style="opacity:${_pwBusy ? '0.6' : '1'}">
                         ${_pwBusy ? 'Bitte warten...' : state.passwordMode === 'login' ? 'Anmelden' : 'Passwort setzen'}
@@ -1101,8 +1099,9 @@
                     </div>`;
                 }
                 pwSection = `${usersList}
-                    <input type="text" placeholder="Dein Name..." style="margin-bottom:12px" id="new-user-input" ${state.users.length === 0 ? 'autofocus' : ''}>
-                    <button class="btn btn-primary btn-full" data-action="new-user">Starten</button>`;
+                    <input type="text" placeholder="Dein Name..." style="margin-bottom:12px" id="new-user-input" maxlength="50" autocomplete="username" ${state.users.length === 0 ? 'autofocus' : ''}>
+                    <input type="password" placeholder="Passwort (min. 4 Zeichen)" style="margin-bottom:12px" id="new-user-pw" autocomplete="new-password">
+                    <button class="btn btn-primary btn-full" data-action="new-user">Konto erstellen</button>`;
             }
 
             return `<div style="min-height:100dvh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px">
@@ -1113,7 +1112,7 @@
                             ${iconFileText()}
                         </div>
                         <h1 style="font-size:24px;font-weight:700;letter-spacing:-0.03em">Vertragsmanagement</h1>
-                        ${!state.passwordMode ? `<p class="text-sm text-2 mt-2">${state.users.length > 0 ? 'Waehle deinen Benutzer' : 'Wie heisst du?'}</p>` : ''}
+                        ${!state.passwordMode ? `<p class="text-sm text-2 mt-2">${state.users.length > 0 ? 'W\u00e4hle deinen Benutzer' : 'Wie hei\u00dft du?'}</p>` : ''}
                         <p class="text-xs text-3 mt-2">
                             ${state.version ? `<span style="cursor:pointer;text-decoration:underline dotted" data-action="show-changelog">v${escapeHtml(state.version)}</span>` : ''}
                             ${state.version ? ' \u00b7 ' : ''}${envBadge()} ${ssoBadge()}
@@ -1874,7 +1873,8 @@
                 }
                 case 'new-user': {
                     const input = document.getElementById('new-user-input');
-                    if (input) handleNewUser(input.value);
+                    const pwInput = document.getElementById('new-user-pw');
+                    if (input) handleNewUser(input.value, pwInput ? pwInput.value : '');
                     break;
                 }
                 case 'password-back': handlePasswordBack(); break;
@@ -2073,7 +2073,12 @@
                 const field = e.target.dataset.field;
                 if (field === 'pw' && state.passwordMode === 'login') { submitPassword(); return; }
                 if (field === 'pw2') { submitPassword(); return; }
-                if (e.target.id === 'new-user-input') { handleNewUser(e.target.value); return; }
+                if (e.target.id === 'new-user-input' || e.target.id === 'new-user-pw') {
+                    const nameInput = document.getElementById('new-user-input');
+                    const pwInput = document.getElementById('new-user-pw');
+                    handleNewUser(nameInput ? nameInput.value : '', pwInput ? pwInput.value : '');
+                    return;
+                }
             }
             if (e.key === 'Escape' && state.modal) {
                 closeModal();

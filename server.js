@@ -759,7 +759,8 @@ app.delete('/api/users/:user', validateApiKey, validateSession, async (req, res)
     }
     if (USE_AUTH_SERVICE) {
         try {
-            await authDelete('/users/' + encodeURIComponent(req.params.user), { token: req.sessionToken });
+            const { status: delStatus } = await authDelete('/users/' + encodeURIComponent(req.params.user), { token: req.sessionToken });
+            if (delStatus < 200 || delStatus >= 300) throw new Error('Auth-Service: Löschen fehlgeschlagen');
             stmts.deleteUserContracts.run(req.sessionUserId);
             stmts.deleteUserGroups.run(req.sessionUserId);
             stmts.deleteUser.run(req.sessionUserId);
