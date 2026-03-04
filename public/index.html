@@ -170,6 +170,9 @@
         .badge-development { background: var(--accent-badge); color: var(--accent); }
         .badge-test        { background: rgba(255,159,10,.12); color: var(--warning); }
         .badge-production  { background: rgba(52,199,89,.12);  color: var(--success); }
+        .sso-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 100px; font-weight: 600; }
+        .sso-ok { background: rgba(52, 199, 89, 0.15); color: #34c759; }
+        .sso-err { background: rgba(255, 59, 48, 0.15); color: #ff3b30; }
 
         /* -- Toast -- */
         .toast-container { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; }
@@ -476,6 +479,7 @@
         const API_BASE = window.location.origin;
         const API_KEY = '%%API_KEY%%';
         const NODE_ENV = '%%NODE_ENV%%';
+        const AUTH_MODE = '%%AUTH_MODE%%';
 
         const app = document.getElementById('app');
 
@@ -507,7 +511,8 @@
             showExpiredSection: false,
             isOnline: navigator.onLine,
             version: '',
-            theme: localStorage.getItem('theme') || 'auto'
+            theme: localStorage.getItem('theme') || 'auto',
+            ssoStatus: null
         };
 
         let formState = null;
@@ -629,6 +634,13 @@
         function envBadge() {
             const env = ENV_CONFIG[NODE_ENV] || ENV_CONFIG.development;
             return `<span class="env-badge badge-${escapeHtml(NODE_ENV)}">${escapeHtml(env.label)}</span>`;
+        }
+
+        function ssoBadge() {
+            if (AUTH_MODE !== 'SSO') return '';
+            if (state.ssoStatus === true) return '<span class="sso-badge sso-ok">SSO \u2713</span>';
+            if (state.ssoStatus === false) return '<span class="sso-badge sso-err">SSO \u2717</span>';
+            return '';
         }
 
         // ============ HELPERS ============
@@ -755,7 +767,10 @@
             try {
                 const r = await apiCall(`${API_BASE}/api/users`);
                 state.users = await r.json();
-            } catch (e) {}
+                if (AUTH_MODE === 'SSO') state.ssoStatus = true;
+            } catch (e) {
+                if (AUTH_MODE === 'SSO') state.ssoStatus = false;
+            }
         }
 
         async function loadContracts() {
@@ -1101,7 +1116,7 @@
                         ${!state.passwordMode ? `<p class="text-sm text-2 mt-2">${state.users.length > 0 ? 'Waehle deinen Benutzer' : 'Wie heisst du?'}</p>` : ''}
                         <p class="text-xs text-3 mt-2">
                             ${state.version ? `<span style="cursor:pointer;text-decoration:underline dotted" data-action="show-changelog">v${escapeHtml(state.version)}</span>` : ''}
-                            ${state.version ? ' \u00b7 ' : ''}${envBadge()}
+                            ${state.version ? ' \u00b7 ' : ''}${envBadge()} ${ssoBadge()}
                         </p>
                     </div>
                     ${pwSection}
@@ -1245,6 +1260,7 @@
                     <div class="divider"></div>
                     <h3 class="fw-7" style="font-size:17px;margin-bottom:16px">Account</h3>
                     <div class="gap-3">${accountSection}</div>
+                    <p class="text-xs text-3" style="text-align:center;margin-top:16px">Auth: ${escapeHtml(AUTH_MODE)}</p>
                     <div style="margin-top:16px">
                         <button class="btn btn-ghost btn-full" data-action="close-modal">Schlie\u00dfen</button>
                     </div>

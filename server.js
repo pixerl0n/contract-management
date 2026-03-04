@@ -13,11 +13,72 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.jso
 const VERSION = packageJson.version;
 const API_KEY = process.env.API_KEY || crypto.randomBytes(32).toString('hex');
 
-if (NODE_ENV === 'development') console.log('🔑 API Key:', API_KEY);
+const CHANGELOG = JSON.parse(fs.readFileSync(path.join(__dirname, 'changelog.json'), 'utf8'));
+
+// ============================================================================
+// AUTH-SERVICE CLIENT
+// ============================================================================
+
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || '';
+const USE_AUTH_SERVICE = !!AUTH_SERVICE_URL;
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '';
+const COOKIE_SECURE = NODE_ENV === 'production';
+const COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
+
 console.log('📦 Version:', VERSION);
 console.log('🔐 Umgebung:', NODE_ENV);
+console.log('🔑 Auth-Modus:', USE_AUTH_SERVICE ? `SSO (${AUTH_SERVICE_URL})` : 'Standalone (lokal)');
+if (NODE_ENV === 'development') console.log('🔑 API_KEY:', API_KEY);
 
-const CHANGELOG = JSON.parse(fs.readFileSync(path.join(__dirname, 'changelog.json'), 'utf8'));
+async function authFetch(endpoint, body) {
+    const res = await fetch(`${AUTH_SERVICE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    return { status: res.status, data };
+}
+
+async function authGet(endpoint) {
+    const res = await fetch(`${AUTH_SERVICE_URL}${endpoint}`);
+    const data = await res.json();
+    return { status: res.status, data };
+}
+
+async function authDelete(endpoint, body) {
+    const res = await fetch(`${AUTH_SERVICE_URL}${endpoint}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    return { status: res.status, data };
+}
+
+function setSessionCookie(res, token) {
+    const parts = [`session=${token}`, `Path=/`, `HttpOnly`, `SameSite=Lax`, `Max-Age=${COOKIE_MAX_AGE}`];
+    if (COOKIE_DOMAIN) parts.push(`Domain=${COOKIE_DOMAIN}`);
+    if (COOKIE_SECURE) parts.push('Secure');
+    res.setHeader('Set-Cookie', parts.join('; '));
+}
+
+function clearSessionCookie(res) {
+    const parts = [`session=`, `Path=/`, `HttpOnly`, `SameSite=Lax`, `Max-Age=0`];
+    if (COOKIE_DOMAIN) parts.push(`Domain=${COOKIE_DOMAIN}`);
+    if (COOKIE_SECURE) parts.push('Secure');
+    res.setHeader('Set-Cookie', parts.join('; '));
+}
+
+function parseCookies(req) {
+    const header = req.headers.cookie || '';
+    const cookies = {};
+    header.split(';').forEach(c => {
+        const [k, ...v] = c.split('=');
+        if (k) cookies[k.trim()] = v.join('=').trim();
+    });
+    return cookies;
+}
 
 const CATEGORIES = [
     'Internet', 'Mobilfunk', 'Streaming', 'Versicherung',
@@ -77,17 +138,40 @@ function validateApiKey(req, res, next) {
     next();
 }
 
-// Session validation middleware (checks x-session-token header or session_token query param)
-function validateSession(req, res, next) {
-    const token = req.headers['x-session-token'] || req.query.session_token;
+// Session validation middleware (checks cookie, x-session-token header, or session_token query param)
+async function validateSession(req, res, next) {
+    const cookies = parseCookies(req);
+    const token = cookies.session || req.headers['x-session-token'] || req.query.session_token;
     if (!token) return res.status(401).json({ error: 'Sitzung fehlt' });
 
-    const row = stmts.verifySession.get(token);
-    if (!row) return res.status(401).json({ error: 'Sitzung abgelaufen' });
-
-    req.sessionUser = row.name;
-    req.sessionUserId = row.id;
-    next();
+    if (USE_AUTH_SERVICE) {
+        try {
+            const { status, data } = await authFetch('/auth/verify', { token });
+            if (status !== 200 || !data.success) {
+                return res.status(401).json({ error: 'Sitzung abgelaufen' });
+            }
+            // Map auth-service username to local user ID
+            let localUser = stmts.getUserByName.get(data.user);
+            if (!localUser) {
+                const result = stmts.createUser.run(data.user);
+                localUser = { id: Number(result.lastInsertRowid), name: data.user };
+            }
+            req.sessionUserId = localUser.id;
+            req.sessionUserName = data.user;
+            req.sessionToken = token;
+            next();
+        } catch (err) {
+            console.error('Auth-Service nicht erreichbar:', err.message);
+            return res.status(503).json({ error: 'Authentifizierung vorübergehend nicht verfügbar' });
+        }
+    } else {
+        const row = stmts.verifySession.get(token);
+        if (!row) return res.status(401).json({ error: 'Sitzung abgelaufen' });
+        req.sessionUserId = row.id;
+        req.sessionUserName = row.name;
+        req.sessionToken = token;
+        next();
+    }
 }
 
 // ============================================================================
@@ -124,7 +208,9 @@ function rateLimit(maxAttempts = 10, windowMs = 15 * 60 * 1000) {
     };
 }
 
-const authLimiter = rateLimit();
+const localAuthLimiter = USE_AUTH_SERVICE
+    ? (_req, _res, next) => next()
+    : rateLimit();
 
 // Cleanup expired rate limit entries every 15 minutes
 setInterval(() => {
@@ -377,10 +463,12 @@ if (!cols.includes('group_id')) {
 // ============================================================================
 
 const stmts = {
-    // Users
+    // Users (ID mapping + local auth)
     getUsers: db.prepare('SELECT id, name, CASE WHEN password_hash IS NOT NULL THEN 1 ELSE 0 END AS hasPassword FROM users ORDER BY name'),
     getUser: db.prepare('SELECT id, name, password_hash, salt FROM users WHERE name = ?'),
+    getUserByName: db.prepare('SELECT id, name, password_hash, salt FROM users WHERE name = ?'),
     getUserById: db.prepare('SELECT id, name FROM users WHERE id = ?'),
+    createUser: db.prepare('INSERT INTO users (name) VALUES (?)'),
     insertUser: db.prepare('INSERT INTO users (name, password_hash, salt) VALUES (?, ?, ?)'),
     deleteUser: db.prepare('DELETE FROM users WHERE id = ?'),
     setPassword: db.prepare("UPDATE users SET password_hash = ?, salt = ? WHERE name = ? AND password_hash IS NULL"),
@@ -470,6 +558,7 @@ app.get('/', (_req, res) => {
         let html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
         html = html.replace('%%API_KEY%%', escapeForJS(API_KEY));
         html = html.replace('%%NODE_ENV%%', escapeForJS(NODE_ENV));
+        html = html.replace('%%AUTH_MODE%%', USE_AUTH_SERVICE ? 'SSO' : 'Standalone');
         res.type('html').send(html);
     } catch (error) {
         console.error('index.html Fehler:', error);
@@ -485,9 +574,7 @@ app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString(), version: VERSION, environment: NODE_ENV });
 });
 
-app.get('/api/version', (_req, res) => {
-    res.json({ version: VERSION });
-});
+app.get('/api/version', (_req, res) => res.json({ version: VERSION, authMode: USE_AUTH_SERVICE ? 'SSO' : 'Standalone' }));
 
 app.get('/api/changelog', (_req, res) => {
     res.json(CHANGELOG);
@@ -506,87 +593,108 @@ app.get('/api/billing-intervals', (_req, res) => {
 // ============================================================================
 
 // Login
-app.post('/api/auth/login', validateApiKey, authLimiter, (req, res) => {
-    try {
-        const { user, password } = req.body || {};
-        const userErr = validateUser(user);
-        if (userErr) return res.status(400).json({ error: userErr });
-
-        const row = stmts.getUser.get(user);
-        if (!row) return res.status(404).json({ error: 'Benutzer nicht gefunden' });
-
-        if (!row.password_hash) {
-            return res.json({ success: false, needsPassword: true });
+app.post('/api/auth/login', validateApiKey, localAuthLimiter, async (req, res) => {
+    const { user, password } = req.body || {};
+    if (USE_AUTH_SERVICE) {
+        try {
+            const { status, data } = await authFetch('/auth/login', { name: user, password });
+            if (data.needsPassword) return res.json({ success: false, needsPassword: true });
+            if (status !== 200) return res.status(status).json(data);
+            setSessionCookie(res, data.token);
+            res.json({ success: true, user: data.user });
+        } catch (err) {
+            console.error('Auth-Service Fehler:', err.message);
+            res.status(503).json({ error: 'Anmeldung vorübergehend nicht möglich' });
         }
-
-        if (!password || !verifyPassword(password, row.password_hash, row.salt)) {
+    } else {
+        const nameErr = validateUser(user);
+        if (nameErr) return res.status(400).json({ error: nameErr });
+        const trimmed = user.trim();
+        const row = stmts.getUser.get(trimmed);
+        if (!row) return res.status(404).json({ error: 'Benutzer nicht gefunden' });
+        if (!row.password_hash) return res.json({ success: false, needsPassword: true });
+        const pwErr = validatePassword(password);
+        if (pwErr) return res.status(400).json({ error: pwErr });
+        if (!verifyPassword(password, row.password_hash, row.salt)) {
             return res.status(401).json({ error: 'Falsches Passwort' });
         }
-
         req.rateLimitReset();
-        const token = createSession(user);
-        res.json({ success: true, token });
-    } catch (error) {
-        console.error('Login error:', error.message);
-        res.status(500).json({ error: 'Anmeldefehler' });
+        const token = createSession(trimmed);
+        setSessionCookie(res, token);
+        res.json({ success: true, user: trimmed });
     }
 });
 
 // Set password (first time only — for migrated users without password)
-app.post('/api/auth/set-password', validateApiKey, authLimiter, (req, res) => {
-    try {
-        const { user, password } = req.body || {};
-        const userErr = validateUser(user);
-        if (userErr) return res.status(400).json({ error: userErr });
+app.post('/api/auth/set-password', validateApiKey, localAuthLimiter, async (req, res) => {
+    const { user, password } = req.body || {};
+    if (USE_AUTH_SERVICE) {
+        try {
+            const { status, data } = await authFetch('/auth/set-password', { name: user, password });
+            if (status !== 200) return res.status(status).json(data);
+            setSessionCookie(res, data.token);
+            res.json({ success: true, user: data.user });
+        } catch (err) {
+            res.status(503).json({ error: 'Vorübergehend nicht möglich' });
+        }
+    } else {
+        const nameErr = validateUser(user);
+        if (nameErr) return res.status(400).json({ error: nameErr });
         const pwErr = validatePassword(password);
         if (pwErr) return res.status(400).json({ error: pwErr });
-
-        const row = stmts.getUser.get(user);
+        const trimmed = user.trim();
+        const row = stmts.getUser.get(trimmed);
         if (!row) return res.status(404).json({ error: 'Benutzer nicht gefunden' });
         if (row.password_hash) return res.status(400).json({ error: 'Passwort bereits gesetzt' });
-
         const { hash, salt } = hashPassword(password);
-        const result = stmts.setPassword.run(hash, salt, user);
+        const result = stmts.setPassword.run(hash, salt, trimmed);
         if (result.changes === 0) return res.status(400).json({ error: 'Passwort konnte nicht gesetzt werden' });
-
         req.rateLimitReset();
-        const token = createSession(user);
-        res.json({ success: true, token });
-    } catch (error) {
-        console.error('Set password error:', error.message);
-        res.status(500).json({ error: 'Fehler beim Setzen des Passworts' });
+        const token = createSession(trimmed);
+        setSessionCookie(res, token);
+        res.json({ success: true, user: trimmed });
     }
 });
 
 // Verify session token
-app.post('/api/auth/verify', validateApiKey, (req, res) => {
-    try {
-        const { token } = req.body || {};
-        if (!token || typeof token !== 'string') return res.status(401).json({ error: 'Token fehlt' });
-
+app.post('/api/auth/verify', validateApiKey, async (req, res) => {
+    const cookies = parseCookies(req);
+    const token = cookies.session || (req.body && req.body.token);
+    if (!token) return res.status(401).json({ error: 'Token fehlt' });
+    if (USE_AUTH_SERVICE) {
+        try {
+            const { status, data } = await authFetch('/auth/verify', { token });
+            if (status !== 200) return res.status(401).json({ error: 'Sitzung abgelaufen' });
+            let localUser = stmts.getUserByName.get(data.user);
+            if (!localUser) {
+                const result = stmts.createUser.run(data.user);
+                localUser = { id: Number(result.lastInsertRowid), name: data.user };
+            }
+            res.json({ success: true, user: data.user, userId: localUser.id });
+        } catch (err) {
+            res.status(503).json({ error: 'Prüfung vorübergehend nicht möglich' });
+        }
+    } else {
         const row = stmts.verifySession.get(token);
         if (!row) return res.status(401).json({ error: 'Sitzung abgelaufen' });
-
         res.json({ success: true, user: row.name, userId: row.id });
-    } catch (error) {
-        console.error('Verify session error:', error.message);
-        res.status(500).json({ error: 'Verifizierungsfehler' });
     }
 });
 
 // Logout (clear session)
-app.post('/api/auth/logout', validateApiKey, (req, res) => {
-    try {
-        const { token } = req.body || {};
-        if (token) {
+app.post('/api/auth/logout', validateApiKey, async (req, res) => {
+    const cookies = parseCookies(req);
+    const token = cookies.session || (req.body && req.body.token);
+    if (token) {
+        if (USE_AUTH_SERVICE) {
+            try { await authFetch('/auth/logout', { token }); } catch (_) {}
+        } else {
             const row = stmts.verifySession.get(token);
             if (row) stmts.clearSession.run(row.name);
         }
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Logout error:', error.message);
-        res.status(500).json({ error: 'Abmeldefehler' });
     }
+    clearSessionCookie(res);
+    res.json({ success: true });
 });
 
 // ============================================================================
@@ -594,58 +702,79 @@ app.post('/api/auth/logout', validateApiKey, (req, res) => {
 // ============================================================================
 
 // Get all users (with hasPassword flag)
-app.get('/api/users', validateApiKey, (req, res) => {
-    try {
+app.get('/api/users', validateApiKey, async (_req, res) => {
+    if (USE_AUTH_SERVICE) {
+        try {
+            const { status, data } = await authGet('/users');
+            if (status !== 200) return res.status(503).json({ error: 'Benutzerliste nicht verfügbar' });
+            res.json(data);
+        } catch (err) {
+            res.status(503).json({ error: 'Benutzerliste nicht verfügbar' });
+        }
+    } else {
         const rows = stmts.getUsers.all();
-        res.json(rows.map(row => ({ id: row.id, name: row.name, hasPassword: !!row.hasPassword })));
-    } catch (error) {
-        console.error('Fetch users error:', error.message);
-        res.status(500).json({ error: 'Fehler beim Laden' });
+        res.json(rows.map(row => ({ name: row.name, hasPassword: !!row.hasPassword })));
     }
 });
 
 // Register new user (with password)
-app.post('/api/users/:user', validateApiKey, authLimiter, (req, res) => {
-    try {
-        const err = validateUser(req.params.user);
-        if (err) return res.status(400).json({ error: err });
-        const { password } = req.body || {};
+app.post('/api/users/:user', validateApiKey, localAuthLimiter, async (req, res) => {
+    const { password } = req.body || {};
+    if (USE_AUTH_SERVICE) {
+        try {
+            const { status, data } = await authFetch('/auth/register', { name: req.params.user, password });
+            if (status !== 200) return res.status(status).json(data);
+            // Create local user for ID mapping
+            let localUser = stmts.getUserByName.get(data.user);
+            if (!localUser) {
+                const result = stmts.createUser.run(data.user);
+                localUser = { id: Number(result.lastInsertRowid), name: data.user };
+            }
+            setSessionCookie(res, data.token);
+            res.json({ success: true, user: data.user });
+        } catch (err) {
+            res.status(503).json({ error: 'Registrierung vorübergehend nicht möglich' });
+        }
+    } else {
+        const nameErr = validateUser(req.params.user);
+        if (nameErr) return res.status(400).json({ error: nameErr });
         const pwErr = validatePassword(password);
         if (pwErr) return res.status(400).json({ error: pwErr });
-
-        const existing = stmts.getUser.get(req.params.user);
+        const trimmed = req.params.user.trim();
+        const existing = stmts.getUser.get(trimmed);
         if (existing) return res.status(409).json({ error: 'Benutzer existiert bereits' });
-
         const { hash, salt } = hashPassword(password);
-        stmts.insertUser.run(req.params.user, hash, salt);
+        stmts.insertUser.run(trimmed, hash, salt);
         req.rateLimitReset();
-        const token = createSession(req.params.user);
-        res.json({ success: true, user: req.params.user, token });
-    } catch (error) {
-        console.error('Register user error:', error.message);
-        res.status(500).json({ error: 'Fehler beim Erstellen' });
+        const token = createSession(trimmed);
+        setSessionCookie(res, token);
+        res.json({ success: true, user: trimmed });
     }
 });
 
 // Delete user and all their contracts
-app.delete('/api/users/:user', validateApiKey, validateSession, (req, res) => {
-    try {
-        const err = validateUser(req.params.user);
-        if (err) return res.status(400).json({ error: err });
-
-        // Check that the session user matches the user being deleted
-        if (req.params.user !== req.sessionUser) {
-            return res.status(403).json({ error: 'Zugriff verweigert' });
+app.delete('/api/users/:user', validateApiKey, validateSession, async (req, res) => {
+    if (req.params.user !== req.sessionUserName) {
+        return res.status(403).json({ error: 'Zugriff verweigert' });
+    }
+    if (USE_AUTH_SERVICE) {
+        try {
+            await authDelete('/users/' + encodeURIComponent(req.params.user), { token: req.sessionToken });
+            stmts.deleteUserContracts.run(req.sessionUserId);
+            stmts.deleteUserGroups.run(req.sessionUserId);
+            stmts.deleteUser.run(req.sessionUserId);
+            clearSessionCookie(res);
+            res.json({ success: true });
+        } catch (err) {
+            res.status(503).json({ error: 'Löschen vorübergehend nicht möglich' });
         }
-
+    } else {
         stmts.clearSession.run(req.params.user);
         stmts.deleteUserContracts.run(req.sessionUserId);
         stmts.deleteUserGroups.run(req.sessionUserId);
         stmts.deleteUser.run(req.sessionUserId);
-        res.json({ success: true, user: req.params.user });
-    } catch (error) {
-        console.error('Delete user error:', error.message);
-        res.status(500).json({ error: 'Fehler beim Löschen' });
+        clearSessionCookie(res);
+        res.json({ success: true });
     }
 });
 
@@ -955,7 +1084,7 @@ app.delete('/api/contracts/:id', validateApiKey, validateSession, (req, res) => 
 app.get('/api/export/json', validateApiKey, validateSession, (req, res) => {
     try {
         const rows = stmts.exportContracts.all(req.sessionUserId);
-        const safeName = sanitizeFilename(req.sessionUser);
+        const safeName = sanitizeFilename(req.sessionUserName);
         const filename = `vertraege-${safeName}-${new Date().toISOString().split('T')[0]}.json`;
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         res.json(rows);
@@ -989,7 +1118,7 @@ app.get('/api/export/csv', validateApiKey, validateSession, (req, res) => {
              esc(r.contract_number),
              esc(r.notes)].join(';')
         ).join('\n');
-        const safeName = sanitizeFilename(req.sessionUser);
+        const safeName = sanitizeFilename(req.sessionUserName);
         const filename = `vertraege-${safeName}-${new Date().toISOString().split('T')[0]}.csv`;
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
