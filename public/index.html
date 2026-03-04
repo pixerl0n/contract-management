@@ -1193,7 +1193,8 @@
 
             let accountSection = '';
             if (!settingsState.confirmDelete) {
-                accountSection = `<button class="btn btn-danger btn-full" data-action="confirm-delete-account">Account l\u00f6schen</button>`;
+                accountSection = `<p class="text-sm text-2">Dein Benutzerkonto und alle Verträge werden unwiderruflich gelöscht.</p>
+                    <button class="btn btn-danger btn-full" data-action="confirm-delete-account" style="margin-top:12px">Konto löschen</button>`;
             } else {
                 accountSection = `<p class="text-sm text-2" style="line-height:1.5">
                     Dein Account <strong>"${escapeHtml(state.user)}"</strong> und alle ${state.contracts.length} Vertr\u00e4ge werden unwiderruflich gel\u00f6scht.
@@ -1209,10 +1210,10 @@
             return `<div class="modal-overlay" data-action="close-modal">
                 <div class="modal" data-stop-propagation>
                     <div class="modal-handle"></div>
+                    <h3 class="fw-7" style="font-size:17px;margin-bottom:16px">Einstellungen</h3>
                     <h3 class="fw-7" style="font-size:17px;margin-bottom:16px">Daten exportieren</h3>
                     <div class="gap-3">
-                        <button class="btn btn-primary btn-full" data-action="export" data-format="json">Als JSON exportieren</button>
-                        <button class="btn btn-secondary btn-full" data-action="export" data-format="csv">Als CSV exportieren (Excel-kompatibel)</button>
+                        <button class="btn btn-primary btn-full" data-action="export" data-format="json">JSON exportieren</button>
                         <p class="text-xs text-3" style="text-align:center">Alle Vertr\u00e4ge werden heruntergeladen.</p>
                     </div>
                     <div class="divider"></div>
@@ -1253,7 +1254,7 @@
                         </div>
                     </div>
                     <div class="divider"></div>
-                    <h3 class="fw-7" style="font-size:17px;margin-bottom:16px">Account</h3>
+                    <h3 class="fw-7" style="font-size:17px;margin-bottom:16px;color:var(--danger)">Konto löschen</h3>
                     <div class="gap-3">${accountSection}</div>
                     <p class="text-xs text-3" style="text-align:center;margin-top:16px">Auth: ${escapeHtml(AUTH_MODE)}</p>
                     <div style="margin-top:16px">
