@@ -13,6 +13,7 @@ services:
       - API_KEY=${API_KEY:-}
       - AUTH_SERVICE_URL=http://auth:3000
       - COOKIE_DOMAIN=
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
     volumes:
       - contracts-data:/app/data
       - ./server.js:/app/server.js

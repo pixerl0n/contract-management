@@ -12,6 +12,8 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 const VERSION = packageJson.version;
 const API_KEY = process.env.API_KEY || crypto.randomBytes(32).toString('hex');
+const LOG_LEVEL = process.env.LOG_LEVEL || (NODE_ENV === 'development' ? 'info' : 'warn');
+const debug = LOG_LEVEL === 'debug' ? (...args) => console.log(`[DEBUG ${new Date().toISOString().slice(11,23)}]`, ...args) : () => {};
 
 const CHANGELOG = JSON.parse(fs.readFileSync(path.join(__dirname, 'changelog.json'), 'utf8'));
 
@@ -27,33 +29,66 @@ const COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
 
 console.log('📦 Version:', VERSION);
 console.log('🔐 Umgebung:', NODE_ENV);
+console.log('📋 Log-Level:', LOG_LEVEL);
 console.log('🔑 Auth-Modus:', USE_AUTH_SERVICE ? `SSO (${AUTH_SERVICE_URL})` : 'Standalone (lokal)');
 if (NODE_ENV === 'development') console.log('🔑 API_KEY:', API_KEY);
 
-async function authFetch(endpoint, body) {
-    const res = await fetch(`${AUTH_SERVICE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    return { status: res.status, data };
+async function authFetch(endpoint, body, token) {
+    debug(`authFetch POST ${endpoint}`, JSON.stringify(body), token ? 'mit Token' : 'ohne Token');
+    try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const res = await fetch(`${AUTH_SERVICE_URL}${endpoint}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(5000),
+        });
+        const data = await res.json();
+        debug(`authFetch POST ${endpoint} -> ${res.status}`, JSON.stringify(data));
+        return { status: res.status, data };
+    } catch (err) {
+        debug(`authFetch POST ${endpoint} ERROR:`, err.message);
+        throw err;
+    }
 }
 
-async function authGet(endpoint) {
-    const res = await fetch(`${AUTH_SERVICE_URL}${endpoint}`);
-    const data = await res.json();
-    return { status: res.status, data };
+async function authGet(endpoint, token) {
+    debug(`authGet GET ${endpoint}`, token ? 'mit Token' : 'ohne Token');
+    try {
+        const headers = {};
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const res = await fetch(`${AUTH_SERVICE_URL}${endpoint}`, {
+            headers,
+            signal: AbortSignal.timeout(5000),
+        });
+        const data = await res.json();
+        debug(`authGet GET ${endpoint} -> ${res.status}`, JSON.stringify(data));
+        return { status: res.status, data };
+    } catch (err) {
+        debug(`authGet GET ${endpoint} ERROR:`, err.message);
+        throw err;
+    }
 }
 
-async function authDelete(endpoint, body) {
-    const res = await fetch(`${AUTH_SERVICE_URL}${endpoint}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    return { status: res.status, data };
+async function authDelete(endpoint, body, token) {
+    debug(`authDelete DELETE ${endpoint}`, body ? JSON.stringify(body) : '', token ? 'mit Token' : 'ohne Token');
+    try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const res = await fetch(`${AUTH_SERVICE_URL}${endpoint}`, {
+            method: 'DELETE',
+            headers,
+            body: body ? JSON.stringify(body) : undefined,
+            signal: AbortSignal.timeout(5000),
+        });
+        const data = await res.json();
+        debug(`authDelete DELETE ${endpoint} -> ${res.status}`, JSON.stringify(data));
+        return { status: res.status, data };
+    } catch (err) {
+        debug(`authDelete DELETE ${endpoint} ERROR:`, err.message);
+        throw err;
+    }
 }
 
 function setSessionCookie(res, token) {
@@ -142,12 +177,14 @@ function validateApiKey(req, res, next) {
 async function validateSession(req, res, next) {
     const cookies = parseCookies(req);
     const token = cookies.session || req.headers['x-session-token'] || req.query.session_token;
+    debug('validateSession:', token ? `token=${token.slice(0,8)}...` : 'kein Token', `cookie=${!!cookies.session}`, `header=${!!req.headers['x-session-token']}`, `query=${!!req.query.session_token}`);
     if (!token) return res.status(401).json({ error: 'Sitzung fehlt' });
 
     if (USE_AUTH_SERVICE) {
         try {
-            const { status, data } = await authFetch('/auth/verify', { token });
+            const { status, data } = await authFetch('/auth/verify', {}, token);
             if (status !== 200 || !data.success) {
+                debug('validateSession: verify fehlgeschlagen', status, JSON.stringify(data));
                 return res.status(401).json({ error: 'Sitzung abgelaufen' });
             }
             // Map auth-service username to local user ID
@@ -663,7 +700,7 @@ app.post('/api/auth/verify', validateApiKey, async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Token fehlt' });
     if (USE_AUTH_SERVICE) {
         try {
-            const { status, data } = await authFetch('/auth/verify', { token });
+            const { status, data } = await authFetch('/auth/verify', {}, token);
             if (status !== 200) return res.status(401).json({ error: 'Sitzung abgelaufen' });
             let localUser = stmts.getUserByName.get(data.user);
             if (!localUser) {
@@ -687,7 +724,7 @@ app.post('/api/auth/logout', validateApiKey, async (req, res) => {
     const token = cookies.session || (req.body && req.body.token);
     if (token) {
         if (USE_AUTH_SERVICE) {
-            try { await authFetch('/auth/logout', { token }); } catch (_) {}
+            try { await authFetch('/auth/logout', {}, token); } catch (_) {}
         } else {
             const row = stmts.verifySession.get(token);
             if (row) stmts.clearSession.run(row.name);
@@ -702,10 +739,12 @@ app.post('/api/auth/logout', validateApiKey, async (req, res) => {
 // ============================================================================
 
 // Get all users (with hasPassword flag)
-app.get('/api/users', validateApiKey, async (_req, res) => {
+app.get('/api/users', validateApiKey, async (req, res) => {
     if (USE_AUTH_SERVICE) {
         try {
-            const { status, data } = await authGet('/users');
+            const cookies = parseCookies(req);
+            const token = cookies.session || req.headers['x-session-token'];
+            const { status, data } = await authGet(token ? '/users' : '/users/list', token);
             if (status !== 200) return res.status(503).json({ error: 'Benutzerliste nicht verfügbar' });
             res.json(data);
         } catch (err) {
@@ -759,7 +798,7 @@ app.delete('/api/users/:user', validateApiKey, validateSession, async (req, res)
     }
     if (USE_AUTH_SERVICE) {
         try {
-            const { status: delStatus } = await authDelete('/users/' + encodeURIComponent(req.params.user), { token: req.sessionToken });
+            const { status: delStatus } = await authDelete('/users/' + encodeURIComponent(req.params.user), null, req.sessionToken);
             if (delStatus < 200 || delStatus >= 300) throw new Error('Auth-Service: Löschen fehlgeschlagen');
             stmts.deleteUserContracts.run(req.sessionUserId);
             stmts.deleteUserGroups.run(req.sessionUserId);
