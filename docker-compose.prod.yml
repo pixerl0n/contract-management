@@ -19,12 +19,12 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
     networks:
       - default
-      - auth-net
+      - auth-prod-net
 
 volumes:
   contracts-data:
     name: contracts-app-prod-data
 
 networks:
-  auth-net:
-    external: true
+  auth-prod-net:
+    name: auth-prod-net

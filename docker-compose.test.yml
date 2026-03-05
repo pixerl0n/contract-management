@@ -27,4 +27,4 @@ volumes:
 
 networks:
   auth-test-net:
-    external: true
+    name: auth-test-net
