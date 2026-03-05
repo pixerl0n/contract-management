@@ -13,6 +13,7 @@ services:
       - API_KEY=${API_KEY:-}
       - AUTH_SERVICE_URL=http://auth:3000
       - COOKIE_DOMAIN=${COOKIE_DOMAIN:-.example.com}
+      - COOKIE_NAME=session_test
     volumes:
       - contracts-data:/app/data
     labels:

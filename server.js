@@ -24,6 +24,7 @@ const CHANGELOG = JSON.parse(fs.readFileSync(path.join(__dirname, 'changelog.jso
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || '';
 const USE_AUTH_SERVICE = !!AUTH_SERVICE_URL;
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '';
+const COOKIE_NAME = process.env.COOKIE_NAME || 'session';
 const COOKIE_SECURE = NODE_ENV === 'production';
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
 
@@ -92,14 +93,14 @@ async function authDelete(endpoint, body, token) {
 }
 
 function setSessionCookie(res, token) {
-    const parts = [`session=${token}`, `Path=/`, `HttpOnly`, `SameSite=Lax`, `Max-Age=${COOKIE_MAX_AGE}`];
+    const parts = [`${COOKIE_NAME}=${token}`, `Path=/`, `HttpOnly`, `SameSite=Lax`, `Max-Age=${COOKIE_MAX_AGE}`];
     if (COOKIE_DOMAIN) parts.push(`Domain=${COOKIE_DOMAIN}`);
     if (COOKIE_SECURE) parts.push('Secure');
     res.setHeader('Set-Cookie', parts.join('; '));
 }
 
 function clearSessionCookie(res) {
-    const parts = [`session=`, `Path=/`, `HttpOnly`, `SameSite=Lax`, `Max-Age=0`];
+    const parts = [`${COOKIE_NAME}=`, `Path=/`, `HttpOnly`, `SameSite=Lax`, `Max-Age=0`];
     if (COOKIE_DOMAIN) parts.push(`Domain=${COOKIE_DOMAIN}`);
     if (COOKIE_SECURE) parts.push('Secure');
     res.setHeader('Set-Cookie', parts.join('; '));
@@ -176,8 +177,8 @@ function validateApiKey(req, res, next) {
 // Session validation middleware (checks cookie, x-session-token header, or session_token query param)
 async function validateSession(req, res, next) {
     const cookies = parseCookies(req);
-    const token = cookies.session || req.headers['x-session-token'] || req.query.session_token;
-    debug('validateSession:', token ? `token=${token.slice(0,8)}...` : 'kein Token', `cookie=${!!cookies.session}`, `header=${!!req.headers['x-session-token']}`, `query=${!!req.query.session_token}`);
+    const token = cookies[COOKIE_NAME] || req.headers['x-session-token'] || req.query.session_token;
+    debug('validateSession:', token ? `token=${token.slice(0,8)}...` : 'kein Token', `cookie=${!!cookies[COOKIE_NAME]}`, `header=${!!req.headers['x-session-token']}`, `query=${!!req.query.session_token}`);
     if (!token) return res.status(401).json({ error: 'Sitzung fehlt' });
 
     if (USE_AUTH_SERVICE) {
@@ -697,7 +698,7 @@ app.post('/api/auth/set-password', validateApiKey, localAuthLimiter, async (req,
 // Verify session token
 app.post('/api/auth/verify', validateApiKey, async (req, res) => {
     const cookies = parseCookies(req);
-    const token = cookies.session || (req.body && req.body.token);
+    const token = cookies[COOKIE_NAME] || (req.body && req.body.token);
     if (!token) return res.status(401).json({ error: 'Token fehlt' });
     if (USE_AUTH_SERVICE) {
         try {
@@ -722,7 +723,7 @@ app.post('/api/auth/verify', validateApiKey, async (req, res) => {
 // Logout (clear session)
 app.post('/api/auth/logout', validateApiKey, async (req, res) => {
     const cookies = parseCookies(req);
-    const token = cookies.session || (req.body && req.body.token);
+    const token = cookies[COOKIE_NAME] || (req.body && req.body.token);
     if (token) {
         if (USE_AUTH_SERVICE) {
             try { await authFetch('/auth/logout', {}, token); } catch (_) {}
@@ -744,7 +745,7 @@ app.get('/api/users', validateApiKey, async (req, res) => {
     if (USE_AUTH_SERVICE) {
         try {
             const cookies = parseCookies(req);
-            const token = cookies.session || req.headers['x-session-token'];
+            const token = cookies[COOKIE_NAME] || req.headers['x-session-token'];
             let result;
             if (token) {
                 result = await authGet('/users', token);
