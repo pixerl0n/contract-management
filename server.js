@@ -272,7 +272,7 @@ function validateUser(name) {
 
 function validatePassword(pw) {
     if (typeof pw !== 'string') return 'Passwort ungültig';
-    if (pw.length < 4) return 'Passwort: mindestens 4 Zeichen';
+    if (pw.length < 8) return 'Passwort: mindestens 8 Zeichen';
     if (pw.length > 128) return 'Passwort: maximal 128 Zeichen';
     return null;
 }

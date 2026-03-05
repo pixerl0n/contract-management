@@ -819,7 +819,7 @@
         async function handleNewUser(name, password) {
             if (!name || !name.trim()) return showToast('Name eingeben', 'error');
             const n = name.trim();
-            if (!password || password.length < 4) return showToast('Passwort: mindestens 4 Zeichen', 'error');
+            if (!password || password.length < 8) return showToast('Passwort: mindestens 8 Zeichen', 'error');
             if (state.users.find(u => u.name === n)) {
                 showToast('Benutzer existiert bereits', 'error');
                 return;
@@ -1096,7 +1096,7 @@
                 }
                 pwSection = `${usersList}
                     <input type="text" placeholder="Dein Name..." style="margin-bottom:12px" id="new-user-input" maxlength="50" autocomplete="username" ${state.users.length === 0 ? 'autofocus' : ''}>
-                    <input type="password" placeholder="Passwort (min. 4 Zeichen)" style="margin-bottom:12px" id="new-user-pw" autocomplete="new-password">
+                    <input type="password" placeholder="Passwort (min. 8 Zeichen)" style="margin-bottom:12px" id="new-user-pw" autocomplete="new-password">
                     <button class="btn btn-primary btn-full" data-action="new-user">Konto erstellen</button>`;
             }
 
@@ -2085,7 +2085,7 @@
         async function submitPassword() {
             if (_pwBusy) return;
             if (!_pwLocal) { showToast('Bitte Passwort eingeben', 'error'); return; }
-            if (_pwLocal.length < 4) { showToast('Passwort: mindestens 4 Zeichen', 'error'); return; }
+            if (_pwLocal.length < 8) { showToast('Passwort: mindestens 8 Zeichen', 'error'); return; }
             const needsConfirm = state.passwordMode === 'set-password' || state.passwordMode === 'register';
             if (needsConfirm && _pwLocal !== _pw2Local) { showToast('Passw\u00f6rter stimmen nicht \u00fcberein', 'error'); return; }
             _pwBusy = true;
