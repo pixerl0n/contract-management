@@ -185,6 +185,7 @@ async function validateSession(req, res, next) {
             const { status, data } = await authFetch('/auth/verify', {}, token);
             if (status !== 200 || !data.success) {
                 debug('validateSession: verify fehlgeschlagen', status, JSON.stringify(data));
+                clearSessionCookie(res);
                 return res.status(401).json({ error: 'Sitzung abgelaufen' });
             }
             // Map auth-service username to local user ID
@@ -744,9 +745,18 @@ app.get('/api/users', validateApiKey, async (req, res) => {
         try {
             const cookies = parseCookies(req);
             const token = cookies.session || req.headers['x-session-token'];
-            const { status, data } = await authGet(token ? '/users' : '/users/list', token);
-            if (status !== 200) return res.status(503).json({ error: 'Benutzerliste nicht verfügbar' });
-            res.json(data);
+            let result;
+            if (token) {
+                result = await authGet('/users', token);
+                if (result.status !== 200) {
+                    clearSessionCookie(res);
+                    result = await authGet('/users/list', null);
+                }
+            } else {
+                result = await authGet('/users/list', null);
+            }
+            if (result.status !== 200) return res.status(503).json({ error: 'Benutzerliste nicht verfügbar' });
+            res.json(result.data);
         } catch (err) {
             res.status(503).json({ error: 'Benutzerliste nicht verfügbar' });
         }
