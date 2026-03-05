@@ -1856,6 +1856,8 @@
                 if (e.target.closest('[data-stop-propagation]')) return;
                 return;
             }
+            // Ignore actions that bubbled from inside modal to overlay
+            if (e.target.closest('[data-stop-propagation]') && !btn.closest('[data-stop-propagation]')) return;
             const action = btn.dataset.action;
 
             switch (action) {
