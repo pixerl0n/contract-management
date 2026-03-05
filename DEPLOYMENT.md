@@ -4,7 +4,7 @@
 
 - Docker & Docker Compose auf dem Server
 - GitHub Container Registry Zugang (GHCR)
-- Zentraler Auth-Service laeuft im `auth-net` Docker-Netzwerk
+- Zentraler Auth-Service laeuft im `auth-net` Docker-Netzwerk (Dev/Prod) bzw. `auth-test-net` (Test)
 
 ## .env einrichten
 
@@ -19,6 +19,9 @@ API_KEY=$(openssl rand -hex 32)
 
 # Cookie-Domain fuer SSO (mit Punkt-Prefix fuer Subdomain-Support)
 COOKIE_DOMAIN=.deine-domain.de
+
+# Log-Level (optional, Default: debug in Dev)
+LOG_LEVEL=debug
 ```
 
 API-Key generieren:
@@ -26,12 +29,13 @@ API-Key generieren:
 openssl rand -hex 32
 ```
 
-## Docker-Netzwerk
+## Docker-Netzwerke
 
-Alle Apps teilen sich das `auth-net` Netzwerk fuer die Kommunikation mit dem zentralen Auth-Service. Falls es noch nicht existiert:
+Dev und Prod teilen sich das `auth-net` Netzwerk, Test nutzt `auth-test-net` (verhindert DNS-Konflikte zwischen Dev- und Test-Auth-Service). Falls die Netzwerke noch nicht existieren:
 
 ```bash
 docker network create auth-net
+docker network create auth-test-net
 ```
 
 ## Server-Deployment
@@ -79,7 +83,7 @@ ghcr.io/<owner>/contracts-app:{dev,test,prod,latest}
 
 ## SSO / Auth-Service
 
-Die App verbindet sich ueber das `auth-net` Docker-Netzwerk mit dem zentralen Auth-Service (`AUTH_SERVICE_URL=http://auth:3000`). Der Auth-Service verwaltet Benutzer und Sessions zentral fuer alle Apps.
+Die App verbindet sich ueber Docker-Netzwerke mit dem zentralen Auth-Service (`AUTH_SERVICE_URL=http://auth:3000`). Dev und Prod nutzen `auth-net`, Test nutzt `auth-test-net` (verhindert DNS-Konflikte). Der Auth-Service verwaltet Benutzer und Sessions zentral fuer alle Apps. Auth-Tokens werden per `Authorization: Bearer` Header an den Auth-Service gesendet.
 
 `COOKIE_DOMAIN` (z.B. `.example.com`) ermoeglicht Cookie-Sharing ueber Subdomains hinweg, sodass ein Login fuer alle Apps gilt.
 

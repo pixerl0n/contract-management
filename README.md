@@ -19,7 +19,7 @@ Interner Container-Port ist immer `3000`.
 
 ---
 
-## Features (v1.1)
+## Features (v1.4.1c)
 
 - Vertragserfassung mit Name, Kategorie, Laufzeit, Kündigungsfrist, Kosten
 - Zahlungsintervall: Monatlich, Quartalsweise, Halbjährlich, Jährlich
@@ -35,6 +35,8 @@ Interner Container-Port ist immer `3000`.
 - Kosten-Übersicht pro Monat und Jahr, aufgeschlüsselt nach Kategorie
 - CSV- und JSON-Export/Import
 - Responsive Design mit Dark/Light Mode
+- SSO via zentralen Auth-Service (Auth-Tokens per Authorization: Bearer Header)
+- Debug-Logging fuer Auth/SSO-Kommunikation (`LOG_LEVEL=debug`, Format: `[DEBUG HH:MM:SS.mmm]`)
 
 ---
 
@@ -110,6 +112,8 @@ openssl rand -hex 32
 cat > .env << 'EOF'
 GHCR_USERNAME=dein-github-username
 API_KEY=<hier-den-generierten-key-einfügen>
+COOKIE_DOMAIN=.deine-domain.de
+LOG_LEVEL=debug
 EOF
 ```
 

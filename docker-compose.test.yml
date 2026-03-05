@@ -19,12 +19,12 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
     networks:
       - default
-      - auth-net
+      - auth-test-net
 
 volumes:
   contracts-data:
     name: contracts-app-test-data
 
 networks:
-  auth-net:
+  auth-test-net:
     external: true
