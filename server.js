@@ -25,7 +25,7 @@ const USE_AUTH_SERVICE = !!AUTH_SERVICE_URL;
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '';
 const COOKIE_NAME = process.env.COOKIE_NAME || 'session';
 const COOKIE_SECURE = NODE_ENV === 'production';
-const COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
+const COOKIE_MAX_AGE = 90 * 24 * 60 * 60; // 90 Tage (= Auth-Service Session-Dauer)
 
 console.log('📦 Version:', VERSION);
 console.log('🔐 Umgebung:', NODE_ENV);
@@ -166,6 +166,16 @@ function validateOrigin(req, res, next) {
     next();
 }
 
+async function authFetchWithRetry(endpoint, body, token) {
+    try {
+        return await authFetch(endpoint, body, token);
+    } catch (err) {
+        debug('authFetchWithRetry: erster Versuch fehlgeschlagen, retry in 2s...', err.message);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return await authFetch(endpoint, body, token);
+    }
+}
+
 // Session validation middleware (checks cookie, x-session-token header, or session_token query param)
 async function validateSession(req, res, next) {
     const cookies = parseCookies(req);
@@ -175,7 +185,7 @@ async function validateSession(req, res, next) {
 
     if (USE_AUTH_SERVICE) {
         try {
-            const { status, data } = await authFetch('/auth/verify', {}, token);
+            const { status, data } = await authFetchWithRetry('/auth/verify', {}, token);
             if (status === 401 || (status === 200 && !data.success)) {
                 debug('validateSession: Token abgelehnt', status, JSON.stringify(data));
                 clearSessionCookie(res);
@@ -196,7 +206,7 @@ async function validateSession(req, res, next) {
             req.sessionToken = token;
             next();
         } catch (err) {
-            console.error('Auth-Service nicht erreichbar:', err.message);
+            console.error('Auth-Service nicht erreichbar (nach Retry):', err.message);
             return res.status(503).json({ error: 'Authentifizierung vorübergehend nicht verfügbar' });
         }
     } else {

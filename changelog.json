@@ -1,11 +1,24 @@
 [
     {
+        "version": "1.4.4",
+        "date": "2026-03-07",
+        "type": "patch",
+        "changes": [
+            "Session: Cookie-Laufzeit von 30 auf 90 Tage erhoeht (Sliding Expiry via Auth-Service)",
+            "Netzwerk-Resilienz: Retry-Logik bei Auth-Verify (kein Ausloggen bei kurzzeitigen Netzwerkfehlern)"
+        ]
+    },
+    {
         "version": "1.4.3",
         "date": "2026-03-07",
         "type": "patch",
         "changes": [
-            "App-Switcher: Waffle-Menü in der Navigation zum schnellen Wechsel zwischen Apps innerhalb derselben Stage",
-            "Google Fonts durch lokale Font-Dateien ersetzt — keine externen Requests mehr"
+            "App-Switcher: Waffle-Menue zum Wechsel zwischen Apps innerhalb derselben Stage",
+            "Hamburger-Menue: Theme, Einstellungen und Abmelden in einem kompakten Menue",
+            "Lokale Fonts: Google Fonts durch lokale Dateien ersetzt, keine externen Abhaengigkeiten",
+            "Sicherheit: API-Key entfernt, Session-Cookie als einzige Authentifizierung",
+            "Sicherheit: Content-Security-Policy Header ergaenzt",
+            "Session-Fix: Kein unnoetiges Ausloggen bei kurzzeitigen Server-Neustarts"
         ]
     },
     {

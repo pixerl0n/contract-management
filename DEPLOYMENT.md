@@ -14,19 +14,11 @@ Erstelle eine `.env` Datei auf dem Server (siehe `.env.example`):
 # GitHub Container Registry Benutzername
 GHCR_USERNAME=dein-github-username
 
-# API-Key generieren (zufaellig, sicher)
-API_KEY=$(openssl rand -hex 32)
-
 # Cookie-Domain fuer SSO (mit Punkt-Prefix fuer Subdomain-Support)
 COOKIE_DOMAIN=.deine-domain.de
 
 # Log-Level (optional, Default: debug in Dev)
-LOG_LEVEL=debug
-```
-
-API-Key generieren:
-```bash
-openssl rand -hex 32
+# LOG_LEVEL=debug
 ```
 
 ## Docker-Netzwerke

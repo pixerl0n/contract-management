@@ -50,7 +50,7 @@ docker compose -p contracts-dev-local -f docker-compose.dev.local.yml up -d --bu
 
 Baut das Image lokal und mounted `server.js` + `public/` als Volumes. Änderungen an diesen Dateien sind sofort sichtbar (Container-Neustart bei `server.js`-Änderungen nötig).
 
-### Logs & API-Key anzeigen
+### Logs anzeigen
 
 ```bash
 docker logs -f contracts-app-dev-local
@@ -105,15 +105,11 @@ scp docker-compose.prod.yml \
 ```bash
 cd ~/docker/contracts
 
-# API-Key generieren
-openssl rand -hex 32
-
 # .env erstellen
 cat > .env << 'EOF'
 GHCR_USERNAME=dein-github-username
-API_KEY=<hier-den-generierten-key-einfügen>
 COOKIE_DOMAIN=.deine-domain.de
-LOG_LEVEL=debug
+# LOG_LEVEL=debug
 EOF
 ```
 
@@ -124,7 +120,7 @@ EOF
 ├── docker-compose.prod.yml     ← Port 4200, NODE_ENV=production
 ├── docker-compose.test.yml     ← Port 4201, NODE_ENV=test
 ├── docker-compose.dev.yml      ← Port 4202, NODE_ENV=development
-└── .env                        ← GHCR_USERNAME + API_KEY
+└── .env                        ← GHCR_USERNAME + COOKIE_DOMAIN
 ```
 
 ---
@@ -242,17 +238,15 @@ Der Workflow nutzt **`GITHUB_TOKEN`** (automatisch von GitHub bereitgestellt) �
 
 ---
 
-## 8. API-Key Sicherheit
+## 8. Sicherheit
 
-Alle Daten-Endpoints sind mit einem API-Key geschützt. Der Key wird bei jedem Request als `x-api-key` Header mitgeschickt.
+Alle Daten-Endpoints sind mit Session-Cookie-Authentifizierung geschützt.
 
-**Offene Endpoints** (kein Key nötig): `/`, `/api/health`, `/api/version`, `/api/changelog`, `/api/categories`, `/api/billing-intervals`
+**Offene Endpoints** (keine Session nötig): `/`, `/api/health`, `/api/version`, `/api/changelog`, `/api/categories`, `/api/billing-intervals`
 
 | Verhalten | Details |
 |-----------|---------|
-| Key per Env-Variable | `API_KEY=...` in `.env` setzen |
-| Kein Key gesetzt | Wird beim Start zufällig generiert (in dev in den Logs sichtbar) |
-| Frontend | Key wird automatisch vom Server ins HTML injiziert |
+| Session-Cookies | Authentifizierung ausschließlich über Session-Cookies |
 | POST/PUT/DELETE | Zusätzlich Origin/Referer-Check |
 
 ---
