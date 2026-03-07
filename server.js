@@ -24,7 +24,7 @@ const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || '';
 const USE_AUTH_SERVICE = !!AUTH_SERVICE_URL;
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '';
 const COOKIE_NAME = process.env.COOKIE_NAME || 'session';
-const COOKIE_SECURE = NODE_ENV === 'production';
+const COOKIE_SECURE = !!COOKIE_DOMAIN;
 const COOKIE_MAX_AGE = 90 * 24 * 60 * 60; // 90 Tage (= Auth-Service Session-Dauer)
 
 console.log('📦 Version:', VERSION);

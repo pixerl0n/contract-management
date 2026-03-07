@@ -28,4 +28,4 @@ volumes:
 
 networks:
   auth-dev-net:
-    name: auth-dev-net
+    external: true
