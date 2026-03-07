@@ -184,10 +184,14 @@ async function validateSession(req, res, next) {
     if (USE_AUTH_SERVICE) {
         try {
             const { status, data } = await authFetch('/auth/verify', {}, token);
-            if (status !== 200 || !data.success) {
-                debug('validateSession: verify fehlgeschlagen', status, JSON.stringify(data));
+            if (status === 401 || (status === 200 && !data.success)) {
+                debug('validateSession: Token abgelehnt', status, JSON.stringify(data));
                 clearSessionCookie(res);
                 return res.status(401).json({ error: 'Sitzung abgelaufen' });
+            }
+            if (status !== 200 || !data.success) {
+                debug('validateSession: unerwarteter Status', status, JSON.stringify(data));
+                return res.status(503).json({ error: 'Authentifizierung vorübergehend nicht verfügbar' });
             }
             // Map auth-service username to local user ID
             let localUser = stmts.getUserByName.get(data.user);

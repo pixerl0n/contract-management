@@ -169,8 +169,6 @@
                      display: flex; align-items: center; justify-content: space-between; }
         .nav-left { display: flex; align-items: center; gap: 10px; }
         .nav-meta { display: flex; align-items: center; gap: 6px; }
-        .nav-date-mobile { display: none; }
-        .nav-date-desktop { }
         .nav-title { font-weight: 700; font-size: 17px; letter-spacing: -.02em; }
 
         /* -- Badge -- */
@@ -460,8 +458,6 @@
             .form-row { grid-template-columns: 1fr; }
             input[type="text"], input[type="number"], input[type="date"], textarea, select { font-size: 16px; }
             .nav-left { flex-direction: column; align-items: flex-start; gap: 2px; }
-            .nav-date-mobile { display: inline; }
-            .nav-date-desktop { display: none; }
         }
 
         @media (max-width: 640px) {
@@ -500,6 +496,41 @@
         .app-switcher-item:hover { background: var(--ghost-hover); }
         .app-switcher-item.current { background: var(--accent-soft); }
         .app-switcher-icon { font-size: 28px; }
+
+        /* Hamburger Menu */
+        .hamburger-menu { position: relative; }
+        .hamburger-btn {
+            background: none; border: none; color: var(--text-2);
+            padding: 8px; border-radius: 50%; cursor: pointer;
+            font-size: 18px; line-height: 1;
+        }
+        .hamburger-btn:hover { background: var(--ghost-hover); }
+        .hamburger-dropdown {
+            display: none; position: absolute; right: 0; top: calc(100% + 8px);
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; box-shadow: var(--shadow-lg);
+            padding: 8px 0; z-index: 200;
+            min-width: 220px;
+        }
+        .hamburger-dropdown.open { display: block; }
+        .hamburger-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 16px; cursor: pointer;
+            text-decoration: none; color: var(--text);
+            font-size: 14px; font-weight: 500;
+            transition: background .15s;
+            border: none; background: none; width: 100%;
+            text-align: left;
+        }
+        .hamburger-item:hover { background: var(--ghost-hover); }
+        .hamburger-separator {
+            height: 1px; background: var(--border);
+            margin: 4px 0;
+        }
+        .hamburger-user {
+            padding: 10px 16px;
+            font-size: 13px; font-weight: 600; color: var(--text-2);
+        }
     </style>
 </head>
 <body>
@@ -563,14 +594,48 @@
             return html;
         }
 
+        function hamburgerMenuHtml() {
+            return '<div class="hamburger-menu">'
+                + '<button class="hamburger-btn" title="Menü">&#9776;</button>'
+                + '<div class="hamburger-dropdown" id="hamburger-dropdown">'
+                + '<div class="hamburger-user">' + escapeHtml(state.user || '') + '</div>'
+                + '<div class="hamburger-separator"></div>'
+                + '<button class="hamburger-item" data-action="toggle-theme">'
+                + '<span style="font-size:18px">' + themeIcon() + '</span>'
+                + '<span>Design: ' + themeTitle() + '</span>'
+                + '</button>'
+                + '<button class="hamburger-item" data-action="show-settings">'
+                + iconSettings()
+                + '<span>Einstellungen</span>'
+                + '</button>'
+                + '<div class="hamburger-separator"></div>'
+                + '<button class="hamburger-item" data-action="logout">'
+                + iconLogout()
+                + '<span>Abmelden</span>'
+                + '</button>'
+                + '</div></div>';
+        }
+
         document.addEventListener('click', function(e) {
             const btn = e.target.closest('.app-switcher-btn');
             const menu = document.querySelector('.app-switcher-menu');
-            if (btn && menu) {
-                menu.classList.toggle('open');
+            const hbtn = e.target.closest('.hamburger-btn');
+            const hmenu = document.getElementById('hamburger-dropdown');
+            if (hbtn && hmenu) {
+                hmenu.classList.toggle('open');
+                if (menu) menu.classList.remove('open');
                 e.stopPropagation();
-            } else if (menu && !e.target.closest('.app-switcher-menu')) {
-                menu.classList.remove('open');
+            } else if (btn && menu) {
+                menu.classList.toggle('open');
+                if (hmenu) hmenu.classList.remove('open');
+                e.stopPropagation();
+            } else {
+                if (menu && !e.target.closest('.app-switcher-menu')) {
+                    menu.classList.remove('open');
+                }
+                if (hmenu && !e.target.closest('.hamburger-dropdown')) {
+                    hmenu.classList.remove('open');
+                }
             }
         });
 
@@ -1731,16 +1796,11 @@
                         <span class="nav-meta">
                             ${state.version ? `<span class="text-xs text-3" style="cursor:pointer;text-decoration:underline dotted" data-action="show-changelog" title="Changelog">v${escapeHtml(state.version)}</span>` : ''}
                             ${envBadge()}
-                            <span class="nav-date-mobile text-xs text-3">${today}</span>
                         </span>
                     </div>
                     <div class="row" style="gap:4px">
-                        <span class="nav-date-desktop text-xs text-3" style="margin-right:4px">${today}</span>
-                        <span class="text-xs text-2" style="margin-right:4px">${escapeHtml(state.user)}</span>
                         ${appSwitcherHtml()}
-                        <button class="btn btn-ghost" title="${themeTitle()}" data-action="toggle-theme">${themeIcon()}</button>
-                        <button class="btn btn-ghost" title="Einstellungen" data-action="show-settings">${iconSettings()}</button>
-                        <button class="btn btn-ghost" title="Abmelden" data-action="logout">${iconLogout()}</button>
+                        ${hamburgerMenuHtml()}
                     </div>
                 </div></nav>
                 <div class="max-w" style="padding-top:20px">
