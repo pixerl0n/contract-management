@@ -139,6 +139,10 @@ app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Cache-Control', 'no-store');
+    if (NODE_ENV === 'production') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
     res.setHeader('Content-Security-Policy', [
         "default-src 'self'",
         "script-src 'self' 'unsafe-inline'",
@@ -179,8 +183,8 @@ async function authFetchWithRetry(endpoint, body, token) {
 // Session validation middleware (checks cookie, x-session-token header, or session_token query param)
 async function validateSession(req, res, next) {
     const cookies = parseCookies(req);
-    const token = cookies[COOKIE_NAME] || req.headers['x-session-token'] || req.query.session_token;
-    debug('validateSession:', token ? `token=${token.slice(0,8)}...` : 'kein Token', `cookie=${!!cookies[COOKIE_NAME]}`, `header=${!!req.headers['x-session-token']}`, `query=${!!req.query.session_token}`);
+    const token = cookies[COOKIE_NAME] || req.headers['x-session-token'];
+    debug('validateSession:', token ? `token=${token.slice(0,8)}...` : 'kein Token', `cookie=${!!cookies[COOKIE_NAME]}`, `header=${!!req.headers['x-session-token']}`);
     if (!token) return res.status(401).json({ error: 'Sitzung fehlt' });
 
     if (USE_AUTH_SERVICE) {
@@ -655,12 +659,12 @@ app.post('/api/auth/login', validateOrigin, localAuthLimiter, async (req, res) =
         if (nameErr) return res.status(400).json({ error: nameErr });
         const trimmed = user.trim();
         const row = stmts.getUser.get(trimmed);
-        if (!row) return res.status(404).json({ error: 'Benutzer nicht gefunden' });
+        if (!row) return res.status(401).json({ error: 'Ungueltige Anmeldedaten' });
         if (!row.password_hash) return res.json({ success: false, needsPassword: true });
         const pwErr = validatePassword(password);
         if (pwErr) return res.status(400).json({ error: pwErr });
         if (!verifyPassword(password, row.password_hash, row.salt)) {
-            return res.status(401).json({ error: 'Falsches Passwort' });
+            return res.status(401).json({ error: 'Ungueltige Anmeldedaten' });
         }
         req.rateLimitReset();
         const token = createSession(trimmed);
@@ -688,7 +692,7 @@ app.post('/api/auth/set-password', validateOrigin, localAuthLimiter, async (req,
         if (pwErr) return res.status(400).json({ error: pwErr });
         const trimmed = user.trim();
         const row = stmts.getUser.get(trimmed);
-        if (!row) return res.status(404).json({ error: 'Benutzer nicht gefunden' });
+        if (!row) return res.status(400).json({ error: 'Passwort konnte nicht gesetzt werden' });
         if (row.password_hash) return res.status(400).json({ error: 'Passwort bereits gesetzt' });
         const { hash, salt } = hashPassword(password);
         const result = stmts.setPassword.run(hash, salt, trimmed);

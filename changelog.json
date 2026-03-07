@@ -1,5 +1,16 @@
 [
     {
+        "version": "1.4.5",
+        "date": "2026-03-07",
+        "type": "patch",
+        "changes": [
+            "Security: User-Enumeration bei Login/Set-Password behoben (einheitliche Fehlermeldungen)",
+            "Security: Session-Token aus Query-Parametern entfernt (nur noch Cookie/Header)",
+            "Security: Cache-Control no-store Header auf allen Responses",
+            "Security: HSTS-Header in Production"
+        ]
+    },
+    {
         "version": "1.4.4",
         "date": "2026-03-07",
         "type": "patch",
