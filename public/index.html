@@ -641,7 +641,6 @@
 
         // ============ CONFIG ============
         const API_BASE = window.location.origin;
-        const API_KEY = '%%API_KEY%%';
         const NODE_ENV = '%%NODE_ENV%%';
         const AUTH_MODE = '%%AUTH_MODE%%';
 
@@ -690,7 +689,7 @@
 
         // ============ API LAYER ============
         async function apiCall(endpoint, options = {}) {
-            const headers = { 'Content-Type': 'application/json', 'x-api-key': API_KEY, ...options.headers };
+            const headers = { 'Content-Type': 'application/json', ...options.headers };
             const response = await fetch(endpoint, { ...options, headers, credentials: 'include' });
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
@@ -998,7 +997,7 @@
                     method: 'POST', body: JSON.stringify({ user: state.selectedUser, password })
                 });
                 const data = await r.json();
-                if (data.success) {
+                if (r.ok && data.success) {
                     if (data.token) localStorage.setItem('contracts_session', data.token);
                     localStorage.setItem('contracts_user', state.selectedUser);
                     state.user = state.selectedUser;
@@ -1009,9 +1008,11 @@
                 } else if (data.needsPassword) {
                     state.passwordMode = 'set-password';
                     render();
+                } else {
+                    showToast(data.error || 'Anmeldung fehlgeschlagen', 'error');
                 }
             } catch (e) {
-                showToast(e.message || 'Anmeldung fehlgeschlagen', 'error');
+                showToast('Netzwerkfehler', 'error');
             }
         }
 
@@ -1031,7 +1032,7 @@
                     loadContracts(); loadGroups();
                 }
             } catch (e) {
-                showToast(e.message || 'Fehler beim Setzen des Passworts', 'error');
+                showToast('Netzwerkfehler', 'error');
             }
         }
 
@@ -2076,7 +2077,7 @@
                 case 'export': {
                     const format = btn.dataset.format;
                     const sessionToken = localStorage.getItem('contracts_session') || '';
-                    const url = `/api/export/${format}?session_token=${encodeURIComponent(sessionToken)}&api_key=${encodeURIComponent(API_KEY)}&t=${Date.now()}`;
+                    const url = `/api/export/${format}?session_token=${encodeURIComponent(sessionToken)}&t=${Date.now()}`;
                     const a = document.createElement('a');
                     a.href = url; a.style.display = 'none';
                     document.body.appendChild(a); a.click(); document.body.removeChild(a);

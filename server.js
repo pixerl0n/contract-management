@@ -11,7 +11,6 @@ const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 const VERSION = packageJson.version;
-const API_KEY = process.env.API_KEY || crypto.randomBytes(32).toString('hex');
 const LOG_LEVEL = process.env.LOG_LEVEL || (NODE_ENV === 'development' ? 'info' : 'warn');
 const debug = LOG_LEVEL === 'debug' ? (...args) => console.log(`[DEBUG ${new Date().toISOString().slice(11,23)}]`, ...args) : () => {};
 
@@ -32,7 +31,6 @@ console.log('📦 Version:', VERSION);
 console.log('🔐 Umgebung:', NODE_ENV);
 console.log('📋 Log-Level:', LOG_LEVEL);
 console.log('🔑 Auth-Modus:', USE_AUTH_SERVICE ? `SSO (${AUTH_SERVICE_URL})` : 'Standalone (lokal)');
-if (NODE_ENV === 'development') console.log('🔑 API_KEY:', API_KEY);
 
 async function authFetch(endpoint, body, token) {
     debug(`authFetch POST ${endpoint}`, JSON.stringify(body), token ? 'mit Token' : 'ohne Token');
@@ -143,9 +141,9 @@ app.use((_req, res, next) => {
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Content-Security-Policy', [
         "default-src 'self'",
-        "script-src 'self' https://unpkg.com 'unsafe-inline' 'unsafe-eval'",
-        "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
-        "font-src 'self' https://fonts.gstatic.com",
+        "script-src 'self' 'unsafe-inline'",
+        "style-src 'self' 'unsafe-inline'",
+        "font-src 'self'",
         "connect-src 'self'",
         "img-src 'self' data:",
     ].join('; '));
@@ -155,14 +153,8 @@ app.use((_req, res, next) => {
 // Serve static files BUT NOT index.html (that's served dynamically with injected config)
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
-// API Key + Origin validation middleware
-function validateApiKey(req, res, next) {
-    const key = req.headers['x-api-key'] || req.query.api_key;
-    if (key !== API_KEY) {
-        return res.status(401).json({ error: 'Nicht autorisiert' });
-    }
-
-    // Origin/Referer check on state-changing requests (blocks bare curl POST/PUT/DELETE)
+// Origin/Referer validation middleware (blocks bare curl POST/PUT/DELETE)
+function validateOrigin(req, res, next) {
     if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
         const origin = req.headers.origin;
         const referer = req.headers.referer;
@@ -599,7 +591,6 @@ function escapeForJS(str) {
 app.get('/', (_req, res) => {
     try {
         let html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
-        html = html.replace('%%API_KEY%%', escapeForJS(API_KEY));
         html = html.replace('%%NODE_ENV%%', escapeForJS(NODE_ENV));
         html = html.replace('%%AUTH_MODE%%', USE_AUTH_SERVICE ? 'SSO' : 'Standalone');
         res.type('html').send(html);
@@ -636,7 +627,7 @@ app.get('/api/billing-intervals', (_req, res) => {
 // ============================================================================
 
 // Login
-app.post('/api/auth/login', validateApiKey, localAuthLimiter, async (req, res) => {
+app.post('/api/auth/login', validateOrigin, localAuthLimiter, async (req, res) => {
     const { user, password } = req.body || {};
     if (USE_AUTH_SERVICE) {
         try {
@@ -669,7 +660,7 @@ app.post('/api/auth/login', validateApiKey, localAuthLimiter, async (req, res) =
 });
 
 // Set password (first time only — for migrated users without password)
-app.post('/api/auth/set-password', validateApiKey, localAuthLimiter, async (req, res) => {
+app.post('/api/auth/set-password', validateOrigin, localAuthLimiter, async (req, res) => {
     const { user, password } = req.body || {};
     if (USE_AUTH_SERVICE) {
         try {
@@ -700,7 +691,7 @@ app.post('/api/auth/set-password', validateApiKey, localAuthLimiter, async (req,
 });
 
 // Verify session token
-app.post('/api/auth/verify', validateApiKey, async (req, res) => {
+app.post('/api/auth/verify', validateOrigin, async (req, res) => {
     const cookies = parseCookies(req);
     const token = cookies[COOKIE_NAME] || (req.body && req.body.token);
     if (!token) return res.status(401).json({ error: 'Token fehlt' });
@@ -725,7 +716,7 @@ app.post('/api/auth/verify', validateApiKey, async (req, res) => {
 });
 
 // Logout (clear session)
-app.post('/api/auth/logout', validateApiKey, async (req, res) => {
+app.post('/api/auth/logout', validateOrigin, async (req, res) => {
     const cookies = parseCookies(req);
     const token = cookies[COOKIE_NAME] || (req.body && req.body.token);
     if (token) {
@@ -745,7 +736,7 @@ app.post('/api/auth/logout', validateApiKey, async (req, res) => {
 // ============================================================================
 
 // Get all users (with hasPassword flag)
-app.get('/api/users', validateApiKey, async (req, res) => {
+app.get('/api/users', validateOrigin, async (req, res) => {
     if (USE_AUTH_SERVICE) {
         try {
             const cookies = parseCookies(req);
@@ -772,7 +763,7 @@ app.get('/api/users', validateApiKey, async (req, res) => {
 });
 
 // Register new user (with password)
-app.post('/api/users/:user', validateApiKey, localAuthLimiter, async (req, res) => {
+app.post('/api/users/:user', validateOrigin, localAuthLimiter, async (req, res) => {
     const { password } = req.body || {};
     if (USE_AUTH_SERVICE) {
         try {
@@ -807,7 +798,7 @@ app.post('/api/users/:user', validateApiKey, localAuthLimiter, async (req, res) 
 });
 
 // Delete user and all their contracts
-app.delete('/api/users/:user', validateApiKey, validateSession, async (req, res) => {
+app.delete('/api/users/:user', validateOrigin, validateSession, async (req, res) => {
     if (req.params.user !== req.sessionUserName) {
         return res.status(403).json({ error: 'Zugriff verweigert' });
     }
@@ -838,7 +829,7 @@ app.delete('/api/users/:user', validateApiKey, validateSession, async (req, res)
 // ============================================================================
 
 // Get all groups for session user
-app.get('/api/groups', validateApiKey, validateSession, (req, res) => {
+app.get('/api/groups', validateOrigin, validateSession, (req, res) => {
     try {
         const groups = stmts.getGroups.all(req.sessionUserId);
         res.json(groups);
@@ -849,7 +840,7 @@ app.get('/api/groups', validateApiKey, validateSession, (req, res) => {
 });
 
 // Create new group
-app.post('/api/groups', validateApiKey, validateSession, (req, res) => {
+app.post('/api/groups', validateOrigin, validateSession, (req, res) => {
     try {
         const validationErr = validateGroup(req.body);
         if (validationErr) return res.status(400).json({ error: validationErr });
@@ -878,7 +869,7 @@ app.post('/api/groups', validateApiKey, validateSession, (req, res) => {
 });
 
 // Update group
-app.put('/api/groups/:id', validateApiKey, validateSession, (req, res) => {
+app.put('/api/groups/:id', validateOrigin, validateSession, (req, res) => {
     try {
         const existing = stmts.getGroup.get(req.params.id, req.sessionUserId);
         if (!existing) return res.status(404).json({ error: 'Gruppe nicht gefunden' });
@@ -908,7 +899,7 @@ app.put('/api/groups/:id', validateApiKey, validateSession, (req, res) => {
 });
 
 // Delete group (clears group_id on associated contracts)
-app.delete('/api/groups/:id', validateApiKey, validateSession, (req, res) => {
+app.delete('/api/groups/:id', validateOrigin, validateSession, (req, res) => {
     try {
         const existing = stmts.getGroup.get(req.params.id, req.sessionUserId);
         if (!existing) return res.status(404).json({ error: 'Gruppe nicht gefunden' });
@@ -927,7 +918,7 @@ app.delete('/api/groups/:id', validateApiKey, validateSession, (req, res) => {
 // ============================================================================
 
 // Get all contracts for session user
-app.get('/api/contracts', validateApiKey, validateSession, (req, res) => {
+app.get('/api/contracts', validateOrigin, validateSession, (req, res) => {
     try {
         const rows = stmts.getContracts.all(req.sessionUserId);
         const allGroups = stmts.getGroups.all(req.sessionUserId);
@@ -954,7 +945,7 @@ app.get('/api/contracts', validateApiKey, validateSession, (req, res) => {
 });
 
 // Get contract statistics — MUST be before /api/contracts/:id
-app.get('/api/contracts/stats', validateApiKey, validateSession, (req, res) => {
+app.get('/api/contracts/stats', validateOrigin, validateSession, (req, res) => {
     try {
         const categories = stmts.getStats.all(req.sessionUserId);
         const totalMonthly = categories.reduce((sum, c) => sum + (c.monthly_total || 0), 0);
@@ -970,7 +961,7 @@ app.get('/api/contracts/stats', validateApiKey, validateSession, (req, res) => {
 });
 
 // Get single contract by id
-app.get('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
+app.get('/api/contracts/:id', validateOrigin, validateSession, (req, res) => {
     try {
         const contract = stmts.getContract.get(req.params.id, req.sessionUserId);
         if (!contract) return res.status(404).json({ error: 'Vertrag nicht gefunden' });
@@ -982,7 +973,7 @@ app.get('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
 });
 
 // Create new contract
-app.post('/api/contracts', validateApiKey, validateSession, (req, res) => {
+app.post('/api/contracts', validateOrigin, validateSession, (req, res) => {
     try {
         const validationErr = validateContract(req.body);
         if (validationErr) return res.status(400).json({ error: validationErr });
@@ -1049,7 +1040,7 @@ app.post('/api/contracts', validateApiKey, validateSession, (req, res) => {
 });
 
 // Update contract
-app.put('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
+app.put('/api/contracts/:id', validateOrigin, validateSession, (req, res) => {
     try {
         const existing = stmts.getContract.get(req.params.id, req.sessionUserId);
         if (!existing) return res.status(404).json({ error: 'Vertrag nicht gefunden' });
@@ -1120,7 +1111,7 @@ app.put('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
 });
 
 // Delete contract
-app.delete('/api/contracts/:id', validateApiKey, validateSession, (req, res) => {
+app.delete('/api/contracts/:id', validateOrigin, validateSession, (req, res) => {
     try {
         const result = stmts.deleteContract.run(req.params.id, req.sessionUserId);
         if (result.changes === 0) return res.status(404).json({ error: 'Vertrag nicht gefunden' });
@@ -1135,8 +1126,8 @@ app.delete('/api/contracts/:id', validateApiKey, validateSession, (req, res) => 
 // EXPORT
 // ============================================================================
 
-// JSON Export (direct download via api_key + session_token in query)
-app.get('/api/export/json', validateApiKey, validateSession, (req, res) => {
+// JSON Export (direct download via session_token in query)
+app.get('/api/export/json', validateOrigin, validateSession, (req, res) => {
     try {
         const rows = stmts.exportContracts.all(req.sessionUserId);
         const safeName = sanitizeFilename(req.sessionUserName);
@@ -1150,7 +1141,7 @@ app.get('/api/export/json', validateApiKey, validateSession, (req, res) => {
 });
 
 // CSV Export (Excel-kompatibel, BOM für Umlaute)
-app.get('/api/export/csv', validateApiKey, validateSession, (req, res) => {
+app.get('/api/export/csv', validateOrigin, validateSession, (req, res) => {
     try {
         const rows = stmts.exportContracts.all(req.sessionUserId);
         const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -1243,7 +1234,7 @@ const importContracts = db.transaction((userId, contracts) => {
     return count;
 });
 
-app.post('/api/import/json', validateApiKey, validateSession, (req, res) => {
+app.post('/api/import/json', validateOrigin, validateSession, (req, res) => {
     try {
         const data = req.body.data;
         if (!Array.isArray(data)) {

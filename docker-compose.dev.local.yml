@@ -10,7 +10,6 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - API_KEY=${API_KEY:-}
       - AUTH_SERVICE_URL=http://auth:3000
       - COOKIE_DOMAIN=
       - LOG_LEVEL=${LOG_LEVEL:-debug}
