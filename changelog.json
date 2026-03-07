@@ -1,5 +1,14 @@
 [
     {
+        "version": "1.4.3",
+        "date": "2026-03-07",
+        "type": "patch",
+        "changes": [
+            "App-Switcher: Waffle-Menü in der Navigation zum schnellen Wechsel zwischen Apps innerhalb derselben Stage",
+            "Google Fonts durch lokale Font-Dateien ersetzt — keine externen Requests mehr"
+        ]
+    },
+    {
         "version": "1.4.2",
         "date": "2026-03-05",
         "type": "patch",

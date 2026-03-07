@@ -7,10 +7,21 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="icon" id="favicon" href="data:,">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
     <style>
+@font-face {
+    font-family: 'DM Sans';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('fonts/dm-sans-latin.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'DM Sans';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('fonts/dm-sans-latin-italic.woff2') format('woff2');
+}
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
@@ -456,6 +467,39 @@
         @media (max-width: 640px) {
             .card { border-radius: var(--r-md); }
         }
+
+        /* App Switcher */
+        .app-switcher { position: relative; }
+        .app-switcher-btn {
+            background: none; border: none; color: var(--text-2);
+            padding: 8px; border-radius: 50%; cursor: pointer;
+            display: grid; grid-template-columns: repeat(3, 4px); gap: 3px;
+            align-items: center; justify-items: center;
+        }
+        .app-switcher-btn:hover { background: var(--ghost-hover); }
+        .app-switcher-dot {
+            width: 4px; height: 4px; border-radius: 50%;
+            background: currentColor;
+        }
+        .app-switcher-menu {
+            display: none; position: absolute; right: 0; top: calc(100% + 8px);
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; box-shadow: var(--shadow-lg);
+            padding: 12px; z-index: 200;
+            grid-template-columns: repeat(2, 1fr); gap: 4px;
+            min-width: 200px;
+        }
+        .app-switcher-menu.open { display: grid; }
+        .app-switcher-item {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 6px; padding: 12px 8px; border-radius: 10px;
+            text-decoration: none; color: var(--text);
+            font-size: 12px; font-weight: 500;
+            transition: background .15s;
+        }
+        .app-switcher-item:hover { background: var(--ghost-hover); }
+        .app-switcher-item.current { background: var(--accent-soft); }
+        .app-switcher-icon { font-size: 28px; }
     </style>
 </head>
 <body>
@@ -475,6 +519,61 @@
     </script>
 
     <script>
+        /* -- App Switcher -- */
+        const APP_SWITCHER_APPS = [
+            { name: 'Workout', slug: 'workout', icon: '\uD83D\uDCAA' },
+            { name: 'Gutscheine', slug: 'gutscheine', icon: '\uD83C\uDF81' },
+            { name: 'Tagebuch', slug: 'tagebuch', icon: '\uD83D\uDCD4' },
+            { name: 'Vertrag', slug: 'vertrag', icon: '\uD83D\uDCCB' },
+        ];
+
+        function getAppStage() {
+            const host = window.location.hostname;
+            if (host.includes('-dev')) return 'dev';
+            if (host.includes('-test')) return 'test';
+            return 'prod';
+        }
+
+        function getAppUrl(slug) {
+            const stage = getAppStage();
+            if (stage === 'prod') return 'https://' + slug + '.fipslab.de';
+            return 'https://' + slug + '-' + stage + '.fipslab.de';
+        }
+
+        function getCurrentAppSlug() {
+            const host = window.location.hostname;
+            const match = host.match(/^([a-z]+)(?:-(dev|test))?\.fipslab\.de$/);
+            return match ? match[1] : null;
+        }
+
+        function appSwitcherHtml() {
+            const current = getCurrentAppSlug();
+            let html = '<div class="app-switcher">'
+                + '<button class="app-switcher-btn" title="Apps">'
+                + Array(9).fill('<span class="app-switcher-dot"></span>').join('')
+                + '</button>'
+                + '<div class="app-switcher-menu">';
+            for (const app of APP_SWITCHER_APPS) {
+                const isCurrent = app.slug === current;
+                html += '<a class="app-switcher-item' + (isCurrent ? ' current' : '') + '" href="' + getAppUrl(app.slug) + '">'
+                    + '<span class="app-switcher-icon">' + app.icon + '</span>'
+                    + app.name + '</a>';
+            }
+            html += '</div></div>';
+            return html;
+        }
+
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.app-switcher-btn');
+            const menu = document.querySelector('.app-switcher-menu');
+            if (btn && menu) {
+                menu.classList.toggle('open');
+                e.stopPropagation();
+            } else if (menu && !e.target.closest('.app-switcher-menu')) {
+                menu.classList.remove('open');
+            }
+        });
+
         // ============ CONFIG ============
         const API_BASE = window.location.origin;
         const API_KEY = '%%API_KEY%%';
@@ -1638,6 +1737,7 @@
                     <div class="row" style="gap:4px">
                         <span class="nav-date-desktop text-xs text-3" style="margin-right:4px">${today}</span>
                         <span class="text-xs text-2" style="margin-right:4px">${escapeHtml(state.user)}</span>
+                        ${appSwitcherHtml()}
                         <button class="btn btn-ghost" title="${themeTitle()}" data-action="toggle-theme">${themeIcon()}</button>
                         <button class="btn btn-ghost" title="Einstellungen" data-action="show-settings">${iconSettings()}</button>
                         <button class="btn btn-ghost" title="Abmelden" data-action="logout">${iconLogout()}</button>
