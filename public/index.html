@@ -600,16 +600,16 @@
                 + '<div class="hamburger-dropdown" id="hamburger-dropdown">'
                 + '<div class="hamburger-user">' + escapeHtml(state.user || '') + '</div>'
                 + '<div class="hamburger-separator"></div>'
-                + '<button class="hamburger-item" data-action="toggle-theme">'
+                + '<button class="hamburger-item" id="hamburger-theme">'
                 + '<span style="font-size:18px">' + themeIcon() + '</span>'
-                + '<span>Design: ' + themeTitle() + '</span>'
+                + '<span>Design: ' + themeLabel() + '</span>'
                 + '</button>'
-                + '<button class="hamburger-item" data-action="show-settings">'
+                + '<button class="hamburger-item" id="hamburger-settings">'
                 + iconSettings()
                 + '<span>Einstellungen</span>'
                 + '</button>'
                 + '<div class="hamburger-separator"></div>'
-                + '<button class="hamburger-item" data-action="logout">'
+                + '<button class="hamburger-item" id="hamburger-logout">'
                 + iconLogout()
                 + '<span>Abmelden</span>'
                 + '</button>'
@@ -637,6 +637,13 @@
                     hmenu.classList.remove('open');
                 }
             }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#hamburger-theme')) { cycleTheme(); return; }
+            if (e.target.closest('#hamburger-settings')) { showModal('settings'); return; }
+            if (e.target.closest('#hamburger-logout')) { handleLogout(); return; }
+            if (e.target.closest('#nav-changelog')) { showModal('changelog'); return; }
         });
 
         // ============ CONFIG ============
@@ -745,7 +752,7 @@
             if (state.theme === 'auto') return iconAuto();
             return document.documentElement.getAttribute('data-theme') === 'dark' ? iconSun() : iconMoon();
         }
-        function themeTitle() {
+        function themeLabel() {
             return state.theme === 'auto' ? 'Auto (abends dunkel)' : state.theme === 'dark' ? 'Immer dunkel' : 'Immer hell';
         }
         startThemeAuto();
@@ -1281,7 +1288,7 @@
                     </div>
                     ${pwSection}
                     <div class="row" style="justify-content:center;margin-top:16px">
-                        <button class="btn btn-ghost" title="${themeTitle()}" data-action="toggle-theme">${themeIcon()}</button>
+                        <button class="btn btn-ghost" title="${themeLabel()}" data-action="toggle-theme">${themeIcon()}</button>
                     </div>
                 </div>
                 ${state.modal && state.modal.type === 'changelog' ? renderChangelogModal() : ''}
@@ -1795,7 +1802,7 @@
                     <div class="nav-left">
                         <span class="nav-title">Vertragsmanagement</span>
                         <span class="nav-meta">
-                            ${state.version ? `<span class="text-xs text-3" style="cursor:pointer;text-decoration:underline dotted" data-action="show-changelog" title="Changelog">v${escapeHtml(state.version)}</span>` : ''}
+                            ${state.version ? `<span class="text-xs text-3" style="cursor:pointer;text-decoration:underline dotted" id="nav-changelog" title="Changelog">v${escapeHtml(state.version)}</span>` : ''}
                             ${envBadge()}
                         </span>
                     </div>
@@ -2043,8 +2050,6 @@
                     render();
                     break;
                 case 'submit-password': submitPassword(); break;
-                case 'logout': handleLogout(); break;
-                case 'show-settings': showModal('settings'); break;
                 case 'new-contract': showModal('contract-form', null); break;
                 case 'edit-contract': {
                     const id = Number(btn.dataset.contractId);
