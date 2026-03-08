@@ -1,5 +1,16 @@
 [
     {
+        "version": "1.4.6",
+        "date": "2026-03-08",
+        "type": "patch",
+        "changes": [
+            "Nav-Bar: Identische Struktur und CSS ueber alle Apps vereinheitlicht",
+            "Nav-Bar: Feste Hoehe, Hamburger-Icon-Groesse angepasst",
+            "Nav-Bar: Theme-Wechsel haelt Hamburger-Menue offen",
+            "Suche: Fokus bleibt beim Tippen erhalten"
+        ]
+    },
+    {
         "version": "1.4.5",
         "date": "2026-03-07",
         "type": "patch",
