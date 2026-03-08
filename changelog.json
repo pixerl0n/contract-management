@@ -1,5 +1,15 @@
 [
     {
+        "version": "1.4.6-beta",
+        "date": "2026-03-08",
+        "type": "patch",
+        "changes": [
+            "Nav-Bar: Responsive Mobile-Layout vereinheitlicht (alle Apps)",
+            "Nav-Bar: Theme-Labels vereinheitlicht (Auto/Dunkel/Hell)",
+            "Nav-Bar: Theme-Icons einheitlich ueber Helper-Funktionen"
+        ]
+    },
+    {
         "version": "1.4.6",
         "date": "2026-03-08",
         "type": "patch",
