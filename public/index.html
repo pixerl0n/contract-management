@@ -2284,13 +2284,18 @@
             render();
             try {
                 const text = await file.files[0].text();
-                const data = JSON.parse(text);
-                if (!Array.isArray(data)) throw new Error('Datei muss ein Array von Vertr\u00e4gen enthalten');
+                const parsed = JSON.parse(text);
+                // Support both old format (array) and new format ({ contracts, groups })
+                const data = Array.isArray(parsed) ? { contracts: parsed, groups: [] } : parsed;
+                if (!data.contracts && !Array.isArray(data)) throw new Error('Ung\u00fcltiges Dateiformat');
                 const r = await apiCall(`${API_BASE}/api/import/json`, { method: 'POST', body: JSON.stringify({ data }) });
                 const result = await r.json();
-                showToast(`${result.imported} Vertr\u00e4ge importiert`);
+                var msg = result.imported + ' Vertr\u00e4ge importiert';
+                if (result.importedGroups) msg += ', ' + result.importedGroups + ' Gruppen';
+                showToast(msg);
                 closeModal();
                 loadContracts();
+                loadGroups();
             } catch (err) {
                 showToast(err.message || 'Import fehlgeschlagen', 'error');
             } finally {

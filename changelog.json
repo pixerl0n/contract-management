@@ -1,9 +1,12 @@
 [
     {
-        "version": "1.4.6-beta",
+        "version": "1.4.6-betac",
         "date": "2026-03-08",
         "type": "patch",
         "changes": [
+            "Export: Benutzerdefinierte Vertragsgruppen werden mit exportiert",
+            "Import: Vertragsgruppen werden importiert und IDs korrekt gemappt",
+            "Import: Abwaertskompatibel mit altem Export-Format (Array)",
             "Nav-Bar: Responsive Mobile-Layout vereinheitlicht (alle Apps)",
             "Nav-Bar: Theme-Labels vereinheitlicht (Auto/Dunkel/Hell)",
             "Nav-Bar: Theme-Icons einheitlich ueber Helper-Funktionen"

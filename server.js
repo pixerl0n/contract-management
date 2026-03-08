@@ -579,7 +579,8 @@ const stmts = {
         WHERE g.user_id = ?
         GROUP BY g.id ORDER BY g.sort_order ASC, g.name ASC
     `),
-    exportContracts: db.prepare('SELECT * FROM contracts WHERE user_id = ? ORDER BY name')
+    exportContracts: db.prepare('SELECT * FROM contracts WHERE user_id = ? ORDER BY name'),
+    exportGroups: db.prepare('SELECT * FROM contract_groups WHERE user_id = ? ORDER BY sort_order ASC, name ASC'),
 };
 
 // ============================================================================
@@ -1143,11 +1144,12 @@ app.delete('/api/contracts/:id', validateOrigin, validateSession, (req, res) => 
 // JSON Export (direct download via session_token in query)
 app.get('/api/export/json', validateOrigin, validateSession, (req, res) => {
     try {
-        const rows = stmts.exportContracts.all(req.sessionUserId);
+        const contracts = stmts.exportContracts.all(req.sessionUserId);
+        const groups = stmts.exportGroups.all(req.sessionUserId);
         const safeName = sanitizeFilename(req.sessionUserName);
         const filename = `vertraege-${safeName}-${new Date().toISOString().split('T')[0]}.json`;
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.json(rows);
+        res.json({ contracts, groups });
     } catch (error) {
         console.error('JSON-Export:', error.message);
         res.status(500).json({ error: 'Export fehlgeschlagen' });
@@ -1193,8 +1195,25 @@ app.get('/api/export/csv', validateOrigin, validateSession, (req, res) => {
 // IMPORT
 // ============================================================================
 
-const importContracts = db.transaction((userId, contracts) => {
-    let count = 0;
+const importContracts = db.transaction((userId, contracts, groups) => {
+    let imported = { contracts: 0, groups: 0 };
+
+    // Import groups and build old-ID → new-ID map
+    const groupIdMap = {};
+    if (Array.isArray(groups)) {
+        for (const g of groups) {
+            if (!g.name || typeof g.name !== 'string' || !g.name.trim()) continue;
+            const existing = stmts.getGroupByName.get(userId, g.name.trim());
+            if (existing) {
+                groupIdMap[g.id] = existing.id;
+            } else {
+                const result = stmts.insertGroup.run(userId, g.name.trim(), g.color || '#4CAF50', g.sort_order || 0);
+                groupIdMap[g.id] = Number(result.lastInsertRowid);
+                imported.groups++;
+            }
+        }
+    }
+
     for (const c of contracts) {
         if (c.cost === undefined && c.monthly_cost !== undefined) { c.cost = c.monthly_cost; }
 
@@ -1215,6 +1234,9 @@ const importContracts = db.transaction((userId, contracts) => {
         const contractStatus = c.status || 'active';
         const dates = calculateDates(c.start_date, c.duration_months, c.cancellation_period_months, autoRenew);
         const finalCancelDate = cancelOverride || dates.cancellation_date;
+
+        // Map old group_id to new group_id
+        const groupId = c.group_id && groupIdMap[c.group_id] ? groupIdMap[c.group_id] : null;
 
         stmts.insertContract.run(
             userId,
@@ -1241,24 +1263,35 @@ const importContracts = db.transaction((userId, contracts) => {
             contractNumber,
             cancelOverride,
             c.notes || null,
-            null
+            groupId
         );
-        count++;
+        imported.contracts++;
     }
-    return count;
+    return imported;
 });
 
 app.post('/api/import/json', validateOrigin, validateSession, (req, res) => {
     try {
-        const data = req.body.data;
-        if (!Array.isArray(data)) {
-            return res.status(400).json({ error: 'data muss ein Array sein' });
-        }
-        if (data.length === 0) return res.status(400).json({ error: 'Keine Daten zum Importieren' });
-        if (data.length > 1000) return res.status(400).json({ error: 'Maximal 1.000 Verträge' });
+        const body = req.body.data || req.body;
 
-        const count = importContracts(req.sessionUserId, data);
-        res.json({ success: true, imported: count });
+        // Neues Format: { contracts: [...], groups: [...] }
+        // Altes Format: [...] (Array von Verträgen)
+        let contracts, groups;
+        if (Array.isArray(body)) {
+            contracts = body;
+            groups = [];
+        } else if (body && Array.isArray(body.contracts)) {
+            contracts = body.contracts;
+            groups = Array.isArray(body.groups) ? body.groups : [];
+        } else {
+            return res.status(400).json({ error: 'Ungültiges Datenformat' });
+        }
+
+        if (contracts.length === 0) return res.status(400).json({ error: 'Keine Daten zum Importieren' });
+        if (contracts.length > 1000) return res.status(400).json({ error: 'Maximal 1.000 Verträge' });
+
+        const imported = importContracts(req.sessionUserId, contracts, groups);
+        res.json({ success: true, imported: imported.contracts, importedGroups: imported.groups });
     } catch (error) {
         console.error('JSON-Import:', error.message);
         res.status(500).json({ error: 'Import fehlgeschlagen' });
