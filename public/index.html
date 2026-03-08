@@ -1800,8 +1800,7 @@
                 else if (state.modal.type === 'delete-confirm') modalHtml = renderDeleteConfirmModal();
             }
 
-            return `<div class="page">
-                ${!state.isOnline ? '<div class="offline-banner">Keine Verbindung -- \u00c4nderungen werden nicht gespeichert</div>' : ''}
+            return `${!state.isOnline ? '<div class="offline-banner">Keine Verbindung -- \u00c4nderungen werden nicht gespeichert</div>' : ''}
                 <nav class="nav"><div class="nav-inner">
                     <div class="nav-left">
                         <span class="nav-title">Vertragsmanagement</span>
@@ -1815,6 +1814,7 @@
                         ${hamburgerMenuHtml()}
                     </div>
                 </div></nav>
+                <div class="page">
                 <div class="max-w" style="padding-top:20px">
                     ${statsHtml}${urgentHtml}${filterHtml}${contentHtml}${categoryStatsHtml}${groupStatsHtml}${expiredHtml}
                 </div>
