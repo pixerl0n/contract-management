@@ -1210,6 +1210,38 @@
             };
         }
 
+        function renderPreviewHtml(f) {
+            const preview = calculatePreviewDates();
+            if (!preview) return '';
+            let costRows = '';
+            const costVal = parseFloat(f.cost);
+            if (costVal > 0 && f.billing_interval && f.billing_interval !== 'monthly') {
+                costRows += `<div class="preview-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:4px">
+                    <span class="preview-label">Monatliche Kosten</span>
+                    <span class="preview-value">${(costVal / getIntervalDivisor(f.billing_interval)).toFixed(2).replace('.', ',')} \u20ac</span>
+                </div>`;
+            }
+            if (costVal > 0) {
+                const isMonthly = f.billing_interval === 'monthly';
+                costRows += `<div class="preview-row" style="margin-top:${isMonthly ? '4' : '0'}px;border-top:${isMonthly ? '1px solid var(--border)' : 'none'};padding-top:${isMonthly ? '4' : '0'}px">
+                    <span class="preview-label">J\u00e4hrliche Kosten</span>
+                    <span class="preview-value">${(costVal / getIntervalDivisor(f.billing_interval) * 12).toFixed(2).replace('.', ',')} \u20ac</span>
+                </div>`;
+            }
+            return `<div class="calculated-preview" style="margin-bottom:16px">
+                <div style="font-size:12px;font-weight:600;color:var(--text-3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em">Berechnete Termine</div>
+                <div class="preview-row">
+                    <span class="preview-label">Vertragsende</span>
+                    <span class="preview-value">${escapeHtml(preview.end_date)}</span>
+                </div>
+                <div class="preview-row">
+                    <span class="preview-label">K\u00fcndigungsdatum${preview.isOverridden ? ' (manuell)' : ''}</span>
+                    <span class="preview-value">${escapeHtml(preview.cancellation_date)}</span>
+                </div>
+                ${costRows}
+            </div>`;
+        }
+
         // ============ RENDER: LOADING ============
         function renderLoading() {
             return `<div style="min-height:100dvh;background:var(--bg);display:flex;align-items:center;justify-content:center">
@@ -1446,38 +1478,7 @@
             if (!state.modal || state.modal.type !== 'contract-form' || !formState) return '';
             const isEdit = !!(state.modal.data && state.modal.data.id);
             const f = formState;
-            const preview = calculatePreviewDates();
-
-            let previewHtml = '';
-            if (preview) {
-                let costRows = '';
-                const costVal = parseFloat(f.cost);
-                if (costVal > 0 && f.billing_interval && f.billing_interval !== 'monthly') {
-                    costRows += `<div class="preview-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:4px">
-                        <span class="preview-label">Monatliche Kosten</span>
-                        <span class="preview-value">${(costVal / getIntervalDivisor(f.billing_interval)).toFixed(2).replace('.', ',')} \u20ac</span>
-                    </div>`;
-                }
-                if (costVal > 0) {
-                    const isMonthly = f.billing_interval === 'monthly';
-                    costRows += `<div class="preview-row" style="margin-top:${isMonthly ? '4' : '0'}px;border-top:${isMonthly ? '1px solid var(--border)' : 'none'};padding-top:${isMonthly ? '4' : '0'}px">
-                        <span class="preview-label">J\u00e4hrliche Kosten</span>
-                        <span class="preview-value">${(costVal / getIntervalDivisor(f.billing_interval) * 12).toFixed(2).replace('.', ',')} \u20ac</span>
-                    </div>`;
-                }
-                previewHtml = `<div class="calculated-preview" style="margin-bottom:16px">
-                    <div style="font-size:12px;font-weight:600;color:var(--text-3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em">Berechnete Termine</div>
-                    <div class="preview-row">
-                        <span class="preview-label">Vertragsende</span>
-                        <span class="preview-value">${escapeHtml(preview.end_date)}</span>
-                    </div>
-                    <div class="preview-row">
-                        <span class="preview-label">K\u00fcndigungsdatum${preview.isOverridden ? ' (manuell)' : ''}</span>
-                        <span class="preview-value">${escapeHtml(preview.cancellation_date)}</span>
-                    </div>
-                    ${costRows}
-                </div>`;
-            }
+            const previewHtml = renderPreviewHtml(f);
 
             let cancelledSection = '';
             if (f.status === 'cancelled') {
@@ -2175,14 +2176,17 @@
                 formState[field] = e.target.value;
                 // Auto-resize textareas
                 if (e.target.tagName === 'TEXTAREA') autoResizeTextarea(e.target);
-                // Re-render for preview updates on relevant fields
+                // Update preview section only (no full re-render to preserve focus)
                 if (['start_date', 'duration_months', 'cancellation_period_months', 'auto_renew', 'cancellation_date_override', 'cost', 'billing_interval'].includes(field)) {
-                    // Update preview section only
                     const previewEl = document.querySelector('.calculated-preview');
-                    const preview = calculatePreviewDates();
-                    if (previewEl && preview) {
-                        // Just re-render the whole modal for simplicity on structural changes
-                        render();
+                    const newPreviewHtml = renderPreviewHtml(formState);
+                    if (previewEl && newPreviewHtml) {
+                        previewEl.outerHTML = newPreviewHtml;
+                    } else if (!previewEl && newPreviewHtml) {
+                        const buttons = document.querySelector('#contract-form > .row');
+                        if (buttons) buttons.insertAdjacentHTML('beforebegin', newPreviewHtml);
+                    } else if (previewEl && !newPreviewHtml) {
+                        previewEl.remove();
                     }
                 }
             }
