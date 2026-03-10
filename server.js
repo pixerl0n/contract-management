@@ -637,6 +637,12 @@ if (!cols.includes('notify_email')) {
 if (!cols.includes('notify_sent_at')) {
     db.exec("ALTER TABLE contracts ADD COLUMN notify_sent_at TEXT");
 }
+if (!cols.includes('notify_email_enabled')) {
+    db.exec("ALTER TABLE contracts ADD COLUMN notify_email_enabled INTEGER DEFAULT 0");
+}
+if (!cols.includes('notify_days_before')) {
+    db.exec("ALTER TABLE contracts ADD COLUMN notify_days_before INTEGER DEFAULT 30");
+}
 
 // ============================================================================
 // PREPARED STATEMENTS
@@ -674,8 +680,8 @@ const stmts = {
             cancellation_period_months, cancellation_date, end_date, cost, billing_interval,
             monthly_cost, cashback, description, status, auto_renew, notify, split_count,
             cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
-            cancellation_date_override, notes, group_id, notify_email)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            cancellation_date_override, notes, group_id, notify_email, notify_email_enabled, notify_days_before)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
     updateContract: db.prepare(`
         UPDATE contracts SET name=?, category=?, start_date=?, duration_months=?,
@@ -684,6 +690,7 @@ const stmts = {
             auto_renew=?, notify=?, split_count=?, cancel_warn_days=?,
             cancelled_at=?, cancellation_confirmed=?, customer_number=?, contract_number=?,
             cancellation_date_override=?, notes=?, group_id=?, notify_email=?,
+            notify_email_enabled=?, notify_days_before=?,
             notify_sent_at = CASE WHEN cancellation_date != ? THEN NULL ELSE notify_sent_at END,
             updated_at=CURRENT_TIMESTAMP
         WHERE id=? AND user_id=?
@@ -1129,7 +1136,8 @@ app.post('/api/contracts', validateOrigin, validateSession, (req, res) => {
         const { name, category, start_date, duration_months, cancellation_period_months, cost,
                 billing_interval, cashback, description, status, auto_renew, notify, split_count,
                 cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
-                cancellation_date_override, notes, group_id, notify_email } = req.body;
+                cancellation_date_override, notes, group_id, notify_email,
+                notify_email_enabled, notify_days_before } = req.body;
 
         const autoRenew = auto_renew !== undefined ? (auto_renew ? 1 : 0) : 1;
         const notifyFlag = notify !== undefined ? (notify ? 1 : 0) : 1;
@@ -1147,6 +1155,8 @@ app.post('/api/contracts', validateOrigin, validateSession, (req, res) => {
         const dates = calculateDates(start_date, duration_months, cancellation_period_months, autoRenew);
         const finalCancelDate = cancelOverride || dates.cancellation_date;
         const notifyEmailVal = (notify_email || '').trim().slice(0, 200);
+        const notifyEmailEnabledVal = notify_email_enabled ? 1 : 0;
+        const notifyDaysBeforeVal = Math.max(1, Math.min(90, parseInt(notify_days_before) || 30));
 
         if (groupId) {
             const group = stmts.getGroup.get(groupId, req.sessionUserId);
@@ -1179,7 +1189,9 @@ app.post('/api/contracts', validateOrigin, validateSession, (req, res) => {
             cancelOverride,
             notes || null,
             groupId,
-            notifyEmailVal
+            notifyEmailVal,
+            notifyEmailEnabledVal,
+            notifyDaysBeforeVal
         );
 
         res.json({ success: true, id: Number(result.lastInsertRowid) });
@@ -1201,7 +1213,8 @@ app.put('/api/contracts/:id', validateOrigin, validateSession, (req, res) => {
         const { name, category, start_date, duration_months, cancellation_period_months, cost,
                 billing_interval, cashback, description, status, auto_renew, notify, split_count,
                 cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
-                cancellation_date_override, notes, group_id, notify_email } = req.body;
+                cancellation_date_override, notes, group_id, notify_email,
+                notify_email_enabled, notify_days_before } = req.body;
 
         const autoRenew = auto_renew !== undefined ? (auto_renew ? 1 : 0) : 1;
         const notifyFlag = notify !== undefined ? (notify ? 1 : 0) : 1;
@@ -1219,6 +1232,8 @@ app.put('/api/contracts/:id', validateOrigin, validateSession, (req, res) => {
         const dates = calculateDates(start_date, duration_months, cancellation_period_months, autoRenew);
         const finalCancelDate = cancelOverride || dates.cancellation_date;
         const notifyEmailVal = (notify_email || '').trim().slice(0, 200);
+        const notifyEmailEnabledVal = notify_email_enabled ? 1 : 0;
+        const notifyDaysBeforeVal = Math.max(1, Math.min(90, parseInt(notify_days_before) || 30));
 
         if (groupId) {
             const group = stmts.getGroup.get(groupId, req.sessionUserId);
@@ -1251,6 +1266,8 @@ app.put('/api/contracts/:id', validateOrigin, validateSession, (req, res) => {
             notes || null,
             groupId,
             notifyEmailVal,
+            notifyEmailEnabledVal,
+            notifyDaysBeforeVal,
             finalCancelDate,
             req.params.id,
             req.sessionUserId
@@ -1299,7 +1316,7 @@ app.get('/api/export/csv', validateOrigin, validateSession, (req, res) => {
     try {
         const rows = stmts.exportContracts.all(req.sessionUserId);
         const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const header = 'Name;Kategorie;Startdatum;Laufzeit (Monate);Kündigungsfrist (Monate);Kündigungsdatum;Enddatum;Kosten;Zahlungsintervall;Monatliche Kosten;Cashback;Geteilt mit;Beschreibung;Status;Auto-Verlängerung;Kündigungswarnung;Warnzeitraum (Tage);Gekündigt am;Kündigung bestätigt;Kundennummer;Vertragsnummer;Notizen\n';
+        const header = 'Name;Kategorie;Startdatum;Laufzeit (Monate);Kündigungsfrist (Monate);Kündigungsdatum;Enddatum;Kosten;Zahlungsintervall;Monatliche Kosten;Cashback;Geteilt mit;Beschreibung;Status;Auto-Verlängerung;Kündigungswarnung;Warnzeitraum (Tage);E-Mail-Erinnerung;Tage vorher;E-Mail;Gekündigt am;Kündigung bestätigt;Kundennummer;Vertragsnummer;Notizen\n';
         const body = rows.map(r =>
             [esc(r.name), esc(r.category), r.start_date, r.duration_months,
              r.cancellation_period_months, r.cancellation_date, r.end_date,
@@ -1312,6 +1329,9 @@ app.get('/api/export/csv', validateOrigin, validateSession, (req, res) => {
              r.auto_renew ? 'Ja' : 'Nein',
              r.notify ? 'Ja' : 'Nein',
              r.cancel_warn_days || 90,
+             r.notify_email_enabled ? 'Ja' : 'Nein',
+             r.notify_days_before || 30,
+             esc(r.notify_email),
              esc(r.cancelled_at),
              r.cancellation_confirmed ? 'Ja' : 'Nein',
              esc(r.customer_number),
@@ -1402,7 +1422,9 @@ const importContracts = db.transaction((userId, contracts, groups) => {
             cancelOverride,
             c.notes || null,
             groupId,
-            (c.notify_email || '').trim().slice(0, 200)
+            (c.notify_email || '').trim().slice(0, 200),
+            c.notify_email_enabled ? 1 : 0,
+            Math.max(1, Math.min(90, parseInt(c.notify_days_before) || 30))
         );
         imported.contracts++;
     }
@@ -1454,12 +1476,12 @@ const stmtExpiringContracts = db.prepare(`
     SELECT c.*, u.name AS user_name
     FROM contracts c
     JOIN users u ON u.id = c.user_id
-    WHERE c.notify = 1
+    WHERE c.notify_email_enabled = 1
       AND c.notify_email != ''
       AND c.status = 'active'
       AND c.cancellation_date IS NOT NULL
       AND c.cancellation_date >= date('now')
-      AND c.cancellation_date <= date('now', '+' || c.cancel_warn_days || ' days')
+      AND c.cancellation_date <= date('now', '+' || c.notify_days_before || ' days')
       AND c.notify_sent_at IS NULL
 `);
 

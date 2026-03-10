@@ -1089,6 +1089,10 @@
         // ============ CONTRACT HANDLERS ============
         async function handleSaveContract() {
             if (!formState || !formState.name.trim()) return;
+            if (formState.notify_email_enabled && !(formState.notify_email || '').trim()) {
+                showToast('Bitte E-Mail-Adresse für Benachrichtigung eingeben', 'error');
+                return;
+            }
             _savingContract = true;
             render();
             try {
@@ -1103,6 +1107,8 @@
                     notify: formState.notify,
                     cancel_warn_days: parseInt(formState.cancel_warn_days) || 90,
                     notify_email: formState.notify_email || '',
+                    notify_email_enabled: formState.notify_email_enabled,
+                    notify_days_before: parseInt(formState.notify_days_before) || 30,
                     split_count: parseInt(formState.split_count) || 1,
                     cancelled_at: formState.status === 'cancelled' ? (formState.cancelled_at || null) : null,
                     cancellation_confirmed: formState.status === 'cancelled' ? formState.cancellation_confirmed : false,
@@ -1163,7 +1169,10 @@
                         cancelled_at: c.cancelled_at || '', cancellation_confirmed: !!c.cancellation_confirmed,
                         customer_number: c.customer_number || '', contract_number: c.contract_number || '',
                         cancellation_date_override: c.cancellation_date_override || '',
-                        notify_email: c.notify_email || ''
+                        notify_email: c.notify_email || '',
+                        notify_email_enabled: !!c.notify_email_enabled,
+                        notify_days_before: c.notify_days_before || 30,
+                        notify_sent_at: c.notify_sent_at || ''
                     };
                 } else {
                     formState = {
@@ -1174,7 +1183,8 @@
                         description: '', auto_renew: true, notes: '', status: 'active',
                         cancelled_at: '', cancellation_confirmed: false, customer_number: '',
                         contract_number: '', cancellation_date_override: '',
-                        notify_email: ''
+                        notify_email: '', notify_email_enabled: false, notify_days_before: 30,
+                        notify_sent_at: ''
                     };
                 }
             } else if (type === 'settings') {
@@ -1505,12 +1515,31 @@
                 notifySection = `<div class="form-group">
                     <label>Warnzeitraum (Tage)</label>
                     <input type="number" data-field="cancel_warn_days" value="${escapeHtml(f.cancel_warn_days)}" min="1" max="365">
-                </div>
-                <div class="form-group">
-                    <label>E-Mail-Erinnerung</label>
-                    <input type="email" data-field="notify_email" value="${escapeHtml(f.notify_email)}" placeholder="name@beispiel.de (optional)" maxlength="200">
                 </div>`;
             }
+
+            const emailNotifySection = `<div style="border-top: 1px solid var(--border, #e0e0e0); padding-top: 12px; margin-top: 4px;">
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between">
+                        <label style="margin:0">E-Mail-Erinnerung</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-field="notify_email_enabled" ${f.notify_email_enabled ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                ${f.notify_email_enabled ? `<div class="form-row">
+                    <div class="form-group">
+                        <label>Tage vorher</label>
+                        <input type="number" data-field="notify_days_before" value="${escapeHtml(f.notify_days_before)}" min="1" max="90">
+                    </div>
+                    <div class="form-group">
+                        <label>E-Mail-Adresse *</label>
+                        <input type="email" data-field="notify_email" value="${escapeHtml(f.notify_email)}" placeholder="name@beispiel.de" maxlength="200">
+                    </div>
+                </div>
+                ${f.notify_sent_at ? '<p style="font-size:0.75rem;color:var(--text-secondary, #888);margin:-8px 0 8px;">Erinnerung gesendet am ' + formatDate(f.notify_sent_at) + '</p>' : ''}` : ''}
+            </div>`;
 
             return `<div class="modal-overlay">
                 <div class="modal" data-stop-propagation>
@@ -1618,6 +1647,7 @@
                             </div>
                         </div>
                         ${notifySection}
+                        ${emailNotifySection}
                         <div class="form-group">
                             <label>Status</label>
                             <select data-field="status">
@@ -2249,7 +2279,7 @@
                     formState.cancelled_at = new Date().toISOString().split('T')[0];
                 }
                 // Re-render on structural changes
-                if (['status', 'notify', 'auto_renew', 'billing_interval', 'cost', 'start_date', 'duration_months', 'cancellation_period_months', 'cancellation_date_override'].includes(field)) {
+                if (['status', 'notify', 'notify_email_enabled', 'auto_renew', 'billing_interval', 'cost', 'start_date', 'duration_months', 'cancellation_period_months', 'cancellation_date_override'].includes(field)) {
                     render();
                 }
             }
