@@ -1,6 +1,6 @@
 {
   "name": "contract-management",
-  "version": "1.4.6-betad",
+  "version": "1.4.7",
   "description": "Persönliches Vertragsmanagement",
   "main": "server.js",
   "scripts": {
@@ -8,8 +8,8 @@
     "test": "node --test tests/integration.test.js"
   },
   "dependencies": {
-    "express": "5.2.1",
-    "better-sqlite3": "12.6.2"
+    "better-sqlite3": "12.6.2",
+    "express": "5.2.1"
   },
   "engines": {
     "node": ">=24.0.0"

@@ -19,7 +19,16 @@ COOKIE_DOMAIN=.deine-domain.de
 
 # Log-Level (optional, Default: debug in Dev)
 # LOG_LEVEL=debug
+
+# Optional: SMTP fuer E-Mail-Erinnerungen bei ablaufenden Kuendigungsfristen
+# SMTP_HOST=mail.deine-domain.de
+# SMTP_PORT=587
+# SMTP_USER=noreply@deine-domain.de
+# SMTP_PASS=dein-smtp-passwort
+# SMTP_FROM=Vertragsmanagement <noreply@deine-domain.de>
 ```
+
+Wenn alle SMTP-Variablen gesetzt sind, werden E-Mail-Erinnerungen fuer bevorstehende Kuendigungsfristen versendet (konfigurierbar pro Vertrag). Ohne SMTP-Konfiguration laeuft die App ohne E-Mail-Funktion.
 
 ## Docker-Netzwerke
 

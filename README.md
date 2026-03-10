@@ -110,6 +110,13 @@ cat > .env << 'EOF'
 GHCR_USERNAME=dein-github-username
 COOKIE_DOMAIN=.deine-domain.de
 # LOG_LEVEL=debug
+
+# Optional: SMTP fuer E-Mail-Erinnerungen bei ablaufenden Kuendigungsfristen
+# SMTP_HOST=mail.deine-domain.de
+# SMTP_PORT=587
+# SMTP_USER=noreply@deine-domain.de
+# SMTP_PASS=dein-smtp-passwort
+# SMTP_FROM=Vertragsmanagement <noreply@deine-domain.de>
 EOF
 ```
 

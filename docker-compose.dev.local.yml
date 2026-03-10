@@ -13,6 +13,11 @@ services:
       - AUTH_SERVICE_URL=http://auth:3000
       - COOKIE_DOMAIN=
       - LOG_LEVEL=${LOG_LEVEL:-debug}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-}
     volumes:
       - contracts-data:/app/data
       - ./server.js:/app/server.js

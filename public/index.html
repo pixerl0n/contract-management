@@ -1102,6 +1102,7 @@
                     cashback: formState.cashback || undefined,
                     notify: formState.notify,
                     cancel_warn_days: parseInt(formState.cancel_warn_days) || 90,
+                    notify_email: formState.notify_email || '',
                     split_count: parseInt(formState.split_count) || 1,
                     cancelled_at: formState.status === 'cancelled' ? (formState.cancelled_at || null) : null,
                     cancellation_confirmed: formState.status === 'cancelled' ? formState.cancellation_confirmed : false,
@@ -1161,7 +1162,8 @@
                         notes: c.notes || '', status: c.status || 'active',
                         cancelled_at: c.cancelled_at || '', cancellation_confirmed: !!c.cancellation_confirmed,
                         customer_number: c.customer_number || '', contract_number: c.contract_number || '',
-                        cancellation_date_override: c.cancellation_date_override || ''
+                        cancellation_date_override: c.cancellation_date_override || '',
+                        notify_email: c.notify_email || ''
                     };
                 } else {
                     formState = {
@@ -1171,7 +1173,8 @@
                         cashback: '', notify: true, cancel_warn_days: 90, split_count: 1,
                         description: '', auto_renew: true, notes: '', status: 'active',
                         cancelled_at: '', cancellation_confirmed: false, customer_number: '',
-                        contract_number: '', cancellation_date_override: ''
+                        contract_number: '', cancellation_date_override: '',
+                        notify_email: ''
                     };
                 }
             } else if (type === 'settings') {
@@ -1502,6 +1505,10 @@
                 notifySection = `<div class="form-group">
                     <label>Warnzeitraum (Tage)</label>
                     <input type="number" data-field="cancel_warn_days" value="${escapeHtml(f.cancel_warn_days)}" min="1" max="365">
+                </div>
+                <div class="form-group">
+                    <label>E-Mail-Erinnerung</label>
+                    <input type="email" data-field="notify_email" value="${escapeHtml(f.notify_email)}" placeholder="name@beispiel.de (optional)" maxlength="200">
                 </div>`;
             }
 

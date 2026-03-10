@@ -1,5 +1,15 @@
 [
     {
+        "version": "1.4.7",
+        "date": "2026-03-10",
+        "type": "minor",
+        "changes": [
+            "E-Mail-Erinnerungen bei ablaufenden Kuendigungsfristen",
+            "Pro Vertrag konfigurierbar: E-Mail-Adresse im Benachrichtigungs-Bereich",
+            "Automatische Pruefung alle 6 Stunden, einmalig pro Vertrag (Reset bei Datumsaenderung)"
+        ]
+    },
+    {
         "version": "1.4.6-betac",
         "date": "2026-03-08",
         "type": "patch",

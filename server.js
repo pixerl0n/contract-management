@@ -5,6 +5,8 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
+const net = require('net');
+const tls = require('tls');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,6 +33,129 @@ console.log('📦 Version:', VERSION);
 console.log('🔐 Umgebung:', NODE_ENV);
 console.log('📋 Log-Level:', LOG_LEVEL);
 console.log('🔑 Auth-Modus:', USE_AUTH_SERVICE ? `SSO (${AUTH_SERVICE_URL})` : 'Standalone (lokal)');
+
+// ============================================================================
+// SMTP / E-MAIL NOTIFICATIONS
+// ============================================================================
+
+const SMTP_HOST = process.env.SMTP_HOST || '';
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const SMTP_FROM = process.env.SMTP_FROM || '';
+const SMTP_ENABLED = !!(SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_FROM);
+
+if (SMTP_ENABLED) {
+    console.log('📧 E-Mail-Benachrichtigungen: aktiv (SMTP:', SMTP_HOST + ':' + SMTP_PORT + ')');
+} else {
+    console.log('📧 E-Mail-Benachrichtigungen: deaktiviert (SMTP nicht konfiguriert)');
+}
+
+function smtpSend(to, subject, textBody) {
+    return new Promise((resolve, reject) => {
+        const timeout = 30000;
+        const secure = SMTP_PORT === 465;
+        let socket;
+        let upgraded = false;
+        let buffer = '';
+
+        function readLine() {
+            return new Promise((res, rej) => {
+                const check = () => {
+                    const idx = buffer.indexOf('\r\n');
+                    if (idx !== -1) {
+                        const line = buffer.slice(0, idx);
+                        buffer = buffer.slice(idx + 2);
+                        if (line.length >= 4 && line[3] === '-') {
+                            check();
+                            return;
+                        }
+                        res(line);
+                        return;
+                    }
+                };
+                socket.once('data', (chunk) => {
+                    buffer += chunk.toString();
+                    check();
+                });
+                check();
+            });
+        }
+
+        async function send(cmd) {
+            socket.write(cmd + '\r\n');
+            return readLine();
+        }
+
+        async function run() {
+            await readLine();
+
+            if (!secure) {
+                await send('EHLO localhost');
+                const tlsRes = await send('STARTTLS');
+                if (!tlsRes.startsWith('220')) throw new Error('STARTTLS fehlgeschlagen: ' + tlsRes);
+                socket = await new Promise((res, rej) => {
+                    const tlsSock = tls.connect({ socket, host: SMTP_HOST }, () => res(tlsSock));
+                    tlsSock.on('error', rej);
+                });
+                buffer = '';
+                upgraded = true;
+            }
+
+            await send('EHLO localhost');
+
+            const authRes = await send('AUTH LOGIN');
+            if (!authRes.startsWith('334')) throw new Error('AUTH fehlgeschlagen: ' + authRes);
+            const userRes = await send(Buffer.from(SMTP_USER).toString('base64'));
+            if (!userRes.startsWith('334')) throw new Error('AUTH USER fehlgeschlagen: ' + userRes);
+            const passRes = await send(Buffer.from(SMTP_PASS).toString('base64'));
+            if (!passRes.startsWith('235')) throw new Error('AUTH PASS fehlgeschlagen: ' + passRes);
+
+            const fromAddr = SMTP_FROM.match(/<([^>]+)>/)?.[1] || SMTP_FROM;
+            await send(`MAIL FROM:<${fromAddr}>`);
+            await send(`RCPT TO:<${to}>`);
+            const dataRes = await send('DATA');
+            if (!dataRes.startsWith('354')) throw new Error('DATA fehlgeschlagen: ' + dataRes);
+
+            const msg = [
+                `From: ${SMTP_FROM}`,
+                `To: ${to}`,
+                `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+                'MIME-Version: 1.0',
+                'Content-Type: text/plain; charset=UTF-8',
+                '',
+                textBody,
+            ].join('\r\n');
+            const endRes = await send(msg + '\r\n.');
+            if (!endRes.startsWith('250')) throw new Error('Senden fehlgeschlagen: ' + endRes);
+
+            await send('QUIT');
+            socket.end();
+            resolve(true);
+        }
+
+        if (secure) {
+            socket = tls.connect(SMTP_PORT, SMTP_HOST, { timeout }, () => run().catch(reject));
+        } else {
+            socket = net.connect(SMTP_PORT, SMTP_HOST, () => run().catch(reject));
+        }
+        socket.setTimeout(timeout);
+        socket.on('timeout', () => { socket.destroy(); reject(new Error('SMTP Timeout')); });
+        socket.on('error', reject);
+    });
+}
+
+async function sendNotificationMail(to, subject, text) {
+    if (!SMTP_ENABLED) return false;
+    try {
+        await smtpSend(to, subject, text);
+        console.log(`📧 Mail gesendet an ${to}: ${subject}`);
+        return true;
+    } catch (err) {
+        console.error(`📧 Mail-Fehler an ${to}:`, err.message);
+        return false;
+    }
+}
 
 async function authFetch(endpoint, body, token) {
     debug(`authFetch POST ${endpoint}`, JSON.stringify(body), token ? 'mit Token' : 'ohne Token');
@@ -506,6 +631,12 @@ if (!cols.includes('cancellation_date_override')) {
 if (!cols.includes('group_id')) {
     db.exec("ALTER TABLE contracts ADD COLUMN group_id INTEGER REFERENCES contract_groups(id) ON DELETE SET NULL");
 }
+if (!cols.includes('notify_email')) {
+    db.exec("ALTER TABLE contracts ADD COLUMN notify_email TEXT DEFAULT ''");
+}
+if (!cols.includes('notify_sent_at')) {
+    db.exec("ALTER TABLE contracts ADD COLUMN notify_sent_at TEXT");
+}
 
 // ============================================================================
 // PREPARED STATEMENTS
@@ -543,8 +674,8 @@ const stmts = {
             cancellation_period_months, cancellation_date, end_date, cost, billing_interval,
             monthly_cost, cashback, description, status, auto_renew, notify, split_count,
             cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
-            cancellation_date_override, notes, group_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            cancellation_date_override, notes, group_id, notify_email)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
     updateContract: db.prepare(`
         UPDATE contracts SET name=?, category=?, start_date=?, duration_months=?,
@@ -552,7 +683,9 @@ const stmts = {
             billing_interval=?, monthly_cost=?, cashback=?, description=?, status=?,
             auto_renew=?, notify=?, split_count=?, cancel_warn_days=?,
             cancelled_at=?, cancellation_confirmed=?, customer_number=?, contract_number=?,
-            cancellation_date_override=?, notes=?, group_id=?, updated_at=CURRENT_TIMESTAMP
+            cancellation_date_override=?, notes=?, group_id=?, notify_email=?,
+            notify_sent_at = CASE WHEN cancellation_date != ? THEN NULL ELSE notify_sent_at END,
+            updated_at=CURRENT_TIMESTAMP
         WHERE id=? AND user_id=?
     `),
     deleteContract: db.prepare('DELETE FROM contracts WHERE id = ? AND user_id = ?'),
@@ -996,7 +1129,7 @@ app.post('/api/contracts', validateOrigin, validateSession, (req, res) => {
         const { name, category, start_date, duration_months, cancellation_period_months, cost,
                 billing_interval, cashback, description, status, auto_renew, notify, split_count,
                 cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
-                cancellation_date_override, notes, group_id } = req.body;
+                cancellation_date_override, notes, group_id, notify_email } = req.body;
 
         const autoRenew = auto_renew !== undefined ? (auto_renew ? 1 : 0) : 1;
         const notifyFlag = notify !== undefined ? (notify ? 1 : 0) : 1;
@@ -1013,6 +1146,7 @@ app.post('/api/contracts', validateOrigin, validateSession, (req, res) => {
         const contractStatus = status || 'active';
         const dates = calculateDates(start_date, duration_months, cancellation_period_months, autoRenew);
         const finalCancelDate = cancelOverride || dates.cancellation_date;
+        const notifyEmailVal = (notify_email || '').trim().slice(0, 200);
 
         if (groupId) {
             const group = stmts.getGroup.get(groupId, req.sessionUserId);
@@ -1044,7 +1178,8 @@ app.post('/api/contracts', validateOrigin, validateSession, (req, res) => {
             contractNumber,
             cancelOverride,
             notes || null,
-            groupId
+            groupId,
+            notifyEmailVal
         );
 
         res.json({ success: true, id: Number(result.lastInsertRowid) });
@@ -1066,7 +1201,7 @@ app.put('/api/contracts/:id', validateOrigin, validateSession, (req, res) => {
         const { name, category, start_date, duration_months, cancellation_period_months, cost,
                 billing_interval, cashback, description, status, auto_renew, notify, split_count,
                 cancel_warn_days, cancelled_at, cancellation_confirmed, customer_number, contract_number,
-                cancellation_date_override, notes, group_id } = req.body;
+                cancellation_date_override, notes, group_id, notify_email } = req.body;
 
         const autoRenew = auto_renew !== undefined ? (auto_renew ? 1 : 0) : 1;
         const notifyFlag = notify !== undefined ? (notify ? 1 : 0) : 1;
@@ -1083,6 +1218,7 @@ app.put('/api/contracts/:id', validateOrigin, validateSession, (req, res) => {
         const contractStatus = status || 'active';
         const dates = calculateDates(start_date, duration_months, cancellation_period_months, autoRenew);
         const finalCancelDate = cancelOverride || dates.cancellation_date;
+        const notifyEmailVal = (notify_email || '').trim().slice(0, 200);
 
         if (groupId) {
             const group = stmts.getGroup.get(groupId, req.sessionUserId);
@@ -1114,6 +1250,8 @@ app.put('/api/contracts/:id', validateOrigin, validateSession, (req, res) => {
             cancelOverride,
             notes || null,
             groupId,
+            notifyEmailVal,
+            finalCancelDate,
             req.params.id,
             req.sessionUserId
         );
@@ -1263,7 +1401,8 @@ const importContracts = db.transaction((userId, contracts, groups) => {
             contractNumber,
             cancelOverride,
             c.notes || null,
-            groupId
+            groupId,
+            (c.notify_email || '').trim().slice(0, 200)
         );
         imported.contracts++;
     }
@@ -1306,6 +1445,64 @@ app.use((err, _req, res, _next) => {
     console.error('Unbehandelter Fehler:', err.message);
     res.status(500).json({ error: 'Interner Serverfehler' });
 });
+
+// ============================================================================
+// E-MAIL NOTIFICATION SCHEDULER
+// ============================================================================
+
+const stmtExpiringContracts = db.prepare(`
+    SELECT c.*, u.name AS user_name
+    FROM contracts c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.notify = 1
+      AND c.notify_email != ''
+      AND c.status = 'active'
+      AND c.cancellation_date IS NOT NULL
+      AND c.cancellation_date >= date('now')
+      AND c.cancellation_date <= date('now', '+' || c.cancel_warn_days || ' days')
+      AND c.notify_sent_at IS NULL
+`);
+
+const stmtMarkNotified = db.prepare(
+    'UPDATE contracts SET notify_sent_at = CURRENT_TIMESTAMP WHERE id = ?'
+);
+
+async function checkExpiringContracts() {
+    if (!SMTP_ENABLED) return;
+    try {
+        const contracts = stmtExpiringContracts.all();
+        if (contracts.length === 0) return;
+        debug(`📧 ${contracts.length} Verträge mit bevorstehender Kündigungsfrist gefunden`);
+        for (const c of contracts) {
+            const daysLeft = Math.ceil((new Date(c.cancellation_date) - new Date()) / (1000 * 60 * 60 * 24));
+            const subject = 'Vertragsmanagement — Erinnerung';
+            const text = [
+                'Hallo,',
+                '',
+                daysLeft <= 0
+                    ? 'bei einem deiner Verträge läuft die Kündigungsfrist heute ab.'
+                    : `bei einem deiner Verträge läuft die Kündigungsfrist in ${daysLeft} Tag${daysLeft !== 1 ? 'en' : ''} ab.`,
+                '',
+                'Bitte prüfe deine Verträge in der App.',
+                '',
+                'Viele Grüße,',
+                'Dein Vertragsmanagement',
+            ].join('\n');
+            const sent = await sendNotificationMail(c.notify_email, subject, text);
+            if (sent) {
+                stmtMarkNotified.run(c.id);
+            }
+        }
+    } catch (err) {
+        console.error('📧 Notification-Check Fehler:', err.message);
+    }
+}
+
+// Prüfung alle 6 Stunden (und einmal 30s nach Start)
+if (SMTP_ENABLED) {
+    setTimeout(checkExpiringContracts, 30 * 1000);
+    setInterval(checkExpiringContracts, 6 * 60 * 60 * 1000).unref();
+}
 
 // ============================================================================
 // START SERVER
