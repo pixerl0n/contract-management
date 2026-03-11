@@ -2345,7 +2345,13 @@
                 }
                 // Re-render on structural changes
                 if (['status', 'notify', 'notify_email_enabled', 'auto_renew', 'billing_interval', 'cost', 'start_date', 'duration_months', 'cancellation_period_months', 'cancellation_date_override'].includes(field)) {
+                    const modalEl = document.querySelector('.modal');
+                    const scrollTop = modalEl ? modalEl.scrollTop : 0;
                     render();
+                    requestAnimationFrame(() => {
+                        const m = document.querySelector('.modal');
+                        if (m) m.scrollTop = scrollTop;
+                    });
                 }
             }
         });
