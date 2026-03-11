@@ -229,14 +229,7 @@
         .type-patch { background: rgba(52,199,89,0.1); color: var(--success); }
 
         /* -- Offline banner -- */
-        .offline-banner {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-            background: var(--danger); color: #fff;
-            text-align: center; padding: 10px 16px;
-            font-size: 13px; font-weight: 600;
-            animation: slideDown .3s ease;
-        }
-        @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+        .offline-banner { background: var(--warning); color: #000; text-align: center; padding: 6px 12px; font-size: 13px; font-weight: 600; }
 
         /* -- Divider -- */
         .divider { height: 1px; background: var(--border); margin: 16px 0; }
@@ -676,18 +669,17 @@
             hideExpiredCancelled: localStorage.getItem('contracts_hideExpiredCancelled') !== 'false',
             userEmail: '',
             showExpiredSection: false,
-            isOnline: navigator.onLine,
+            isOffline: !navigator.onLine,
             version: '',
             theme: localStorage.getItem('theme') || 'auto',
             ssoStatus: null
         };
 
         let formState = null;
-        let settingsState = { importing: false, confirmDelete: false, deleting: false, editGroup: null };
+        let settingsState = { importing: false, deleting: false, editGroup: null };
         let changelogData = null;
         let toasts = [];
         let _pwLocal = '';
-        let _pw2Local = '';
         let _pwBusy = false;
         let _savingContract = false;
 
@@ -769,7 +761,7 @@
             const id = Date.now() + Math.random();
             toasts.push({ id, message, type });
             renderToastContainer();
-            setTimeout(() => { toasts = toasts.filter(t => t.id !== id); renderToastContainer(); }, 2500);
+            setTimeout(() => { toasts = toasts.filter(t => t.id !== id); renderToastContainer(); }, 3000);
         }
         function renderToastContainer() {
             let el = document.getElementById('toast-container');
@@ -998,7 +990,7 @@
         function handleUserClick(userObj) {
             state.selectedUser = userObj.name;
             state.showPw = false;
-            _pwLocal = ''; _pw2Local = '';
+            _pwLocal = '';
             state.passwordMode = userObj.hasPassword ? 'login' : 'set-password';
             render();
         }
@@ -1084,12 +1076,13 @@
             state.passwordMode = null;
             state.selectedUser = '';
             state.showPw = false;
-            _pwLocal = ''; _pw2Local = '';
+            _pwLocal = '';
             render();
         }
 
         async function handleLogout() {
             try { await apiCall(`${API_BASE}/api/auth/logout`, { method: 'POST' }); } catch (_) {}
+            showToast('Abgemeldet');
             localStorage.removeItem('contracts_user');
             state.user = ''; state.userId = null; state.contracts = []; state.stats = null;
             state.view = 'login'; state.passwordMode = null; state.selectedUser = '';
@@ -1200,7 +1193,7 @@
                     };
                 }
             } else if (type === 'settings') {
-                settingsState = { importing: false, confirmDelete: false, deleting: false, editGroup: null };
+                settingsState = { importing: false, deleting: false, editGroup: null };
             } else if (type === 'changelog') {
                 changelogData = null;
                 fetch(`${API_BASE}/api/changelog`).then(r => r.json()).then(data => { changelogData = data; render(); }).catch(() => { changelogData = []; render(); });
@@ -1270,7 +1263,7 @@
         // ============ RENDER: LOADING ============
         function renderLoading() {
             return `<div style="min-height:100dvh;background:var(--bg);display:flex;align-items:center;justify-content:center">
-                ${!state.isOnline ? '<div class="offline-banner">Keine Verbindung -- \u00c4nderungen werden nicht gespeichert</div>' : ''}
+                ${state.isOffline ? '<div class="offline-banner">Offline \u2014 Speichern nicht m\u00f6glich</div>' : ''}
                 <p class="text-2" style="font-size:16px;font-weight:500">L\u00e4dt...</p>
             </div>`;
         }
@@ -1279,7 +1272,6 @@
         function renderLogin() {
             let pwSection = '';
             if (state.passwordMode) {
-                const needsConfirm = state.passwordMode === 'set-password' || state.passwordMode === 'register';
                 const title = state.passwordMode === 'login' ? 'Anmelden' :
                               state.passwordMode === 'set-password' ? 'Passwort erstellen' : 'Neuer Benutzer';
                 const subtitle = state.passwordMode === 'login' ? `Passwort f\u00fcr ${escapeHtml(state.selectedUser)}` :
@@ -1302,9 +1294,6 @@
                             ${state.showPw ? iconEyeOff() : iconEye()}
                         </button>
                     </div>
-                    ${needsConfirm ? `<div class="pw-field">
-                        <input type="${state.showPw ? 'text' : 'password'}" data-field="pw2" value="${escapeHtml(_pw2Local)}" placeholder="Passwort best\u00e4tigen" id="pw2-input">
-                    </div>` : ''}
                     <button class="btn btn-primary btn-full" data-action="submit-password" ${_pwBusy ? 'disabled' : ''} style="opacity:${_pwBusy ? '0.6' : '1'}">
                         ${_pwBusy ? 'Bitte warten...' : state.passwordMode === 'login' ? 'Anmelden' : 'Passwort setzen'}
                     </button>
@@ -1335,11 +1324,11 @@
             }
 
             return `<div style="min-height:100dvh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px">
-                ${!state.isOnline ? '<div class="offline-banner">Keine Verbindung -- \u00c4nderungen werden nicht gespeichert</div>' : ''}
+                ${state.isOffline ? '<div class="offline-banner">Offline \u2014 Speichern nicht m\u00f6glich</div>' : ''}
                 <div class="card" style="padding:36px 32px;max-width:400px;width:100%">
                     <div style="text-align:center;margin-bottom:28px">
                         <div style="width:52px;height:52px;border-radius:16px;background:var(--accent-soft);display:inline-flex;align-items:center;justify-content:center;color:var(--accent);margin-bottom:16px">
-                            ${iconFileText()}
+                            ${iconUser()}
                         </div>
                         <h1 style="font-size:24px;font-weight:700;letter-spacing:-0.03em">Vertragsmanagement</h1>
                         ${!state.passwordMode ? `<p class="text-sm text-2 mt-2">${state.users.length > 0 ? 'W\u00e4hle deinen Benutzer' : 'Wie hei\u00dft du?'}</p>` : ''}
@@ -1425,21 +1414,10 @@
                 </div>`;
             }
 
-            let accountSection = '';
-            if (!settingsState.confirmDelete) {
-                accountSection = `<p class="text-sm text-2">Dein Benutzerkonto und alle Verträge werden unwiderruflich gelöscht.</p>
-                    <button class="btn btn-danger btn-full" data-action="confirm-delete-account" style="margin-top:12px">Konto löschen</button>`;
-            } else {
-                accountSection = `<p class="text-sm text-2" style="line-height:1.5">
-                    Dein Account <strong>"${escapeHtml(state.user)}"</strong> und alle ${state.contracts.length} Vertr\u00e4ge werden unwiderruflich gel\u00f6scht.
-                </p>
-                <div class="row" style="gap:10px;margin-top:12px">
-                    <button class="btn btn-secondary btn-full" data-action="cancel-delete-account">Abbrechen</button>
-                    <button class="btn btn-danger btn-full" data-action="delete-account" ${settingsState.deleting ? 'disabled' : ''}>
-                        ${settingsState.deleting ? 'L\u00f6sche...' : 'Endg\u00fcltig l\u00f6schen'}
-                    </button>
-                </div>`;
-            }
+            let accountSection = `<p class="text-sm text-2">Dein Benutzerkonto und alle Verträge werden unwiderruflich gelöscht.</p>
+                    <button class="btn btn-danger btn-full" data-action="delete-account" style="margin-top:12px" ${settingsState.deleting ? 'disabled' : ''}>
+                        ${settingsState.deleting ? 'Lösche...' : 'Konto löschen'}
+                    </button>`;
 
             return `<div class="modal-overlay">
                 <div class="modal" data-stop-propagation>
@@ -1500,7 +1478,7 @@
                     <div class="gap-3">${accountSection}</div>
                     <p class="text-xs text-3" style="text-align:center;margin-top:16px">Auth: ${escapeHtml(AUTH_MODE)} · E-Mail: ${SMTP_ENABLED ? 'aktiv' : 'deaktiviert'}</p>
                     <div style="margin-top:16px">
-                        <button class="btn btn-ghost btn-full" data-action="close-modal">Schlie\u00dfen</button>
+                        <button class="btn btn-secondary btn-full" data-action="close-modal">Schlie\u00dfen</button>
                     </div>
                 </div>
             </div>`;
@@ -1558,7 +1536,21 @@
                         <input type="email" data-field="notify_email" value="${escapeHtml(f.notify_email)}" placeholder="name@beispiel.de" maxlength="200">
                     </div>
                 </div>
-                ${f.notify_sent_at ? '<p style="font-size:0.75rem;color:var(--text-secondary, #888);margin:-8px 0 8px;">Erinnerung gesendet am ' + formatDate(f.notify_sent_at) + '</p>' : ''}` : ''}
+                ${f.notify_sent_at ? '<p style="font-size:0.75rem;color:var(--text-secondary, #888);margin:-8px 0 8px;">Erinnerung gesendet am ' + formatDate(f.notify_sent_at) + '</p>' : ''}
+                ${(() => {
+                    if (!formState || !formState.start_date || !formState.duration_months) return '';
+                    const s = new Date(formState.start_date);
+                    const e = new Date(s);
+                    e.setMonth(e.getMonth() + parseInt(formState.duration_months));
+                    const now = new Date();
+                    if (formState.auto_renew) { while (e <= now) e.setMonth(e.getMonth() + parseInt(formState.duration_months)); }
+                    const c = new Date(e);
+                    c.setMonth(c.getMonth() - parseInt(formState.cancellation_period_months || 0));
+                    const cancelDate = formState.cancellation_date_override ? new Date(formState.cancellation_date_override + 'T12:00:00') : c;
+                    const notifyDate = new Date(cancelDate);
+                    notifyDate.setDate(notifyDate.getDate() - (parseInt(f.notify_days_before) || 30));
+                    return '<p style="font-size:0.75rem;color:var(--text-secondary, #888);margin:-8px 0 8px;">Voraussichtliche Benachrichtigung am ' + formatDate(notifyDate.toISOString()) + '</p>';
+                })()}` : ''}
             </div>`;
 
             return `<div class="modal-overlay">
@@ -1859,7 +1851,7 @@
                 else if (state.modal.type === 'delete-confirm') modalHtml = renderDeleteConfirmModal();
             }
 
-            return `${!state.isOnline ? '<div class="offline-banner">Keine Verbindung -- \u00c4nderungen werden nicht gespeichert</div>' : ''}
+            return `${state.isOffline ? '<div class="offline-banner">Offline \u2014 Speichern nicht m\u00f6glich</div>' : ''}
                 <nav class="nav"><div class="nav-inner">
                     <div class="nav-left">
                         <span class="nav-title">Vertragsmanagement</span>
@@ -2070,9 +2062,12 @@
         }
 
         function afterRender() {
-            // Autofocus
+            // Autofocus — only on initial modal open, not on re-renders from toggle/field changes
             const nameInput = document.getElementById('contract-name-input');
-            if (nameInput && state.modal && state.modal.type === 'contract-form') nameInput.focus();
+            if (nameInput && state.modal && state.modal.type === 'contract-form' && !state.modal._focusDone) {
+                nameInput.focus();
+                state.modal._focusDone = true;
+            }
             const pwInput = document.getElementById('pw-input');
             if (pwInput && state.passwordMode) pwInput.focus();
             // Auto-resize textareas
@@ -2183,33 +2178,67 @@
                     settingsState.editGroup = null;
                     render();
                     break;
-                case 'confirm-delete-account':
-                    settingsState.confirmDelete = true;
-                    render();
-                    break;
-                case 'cancel-delete-account':
-                    settingsState.confirmDelete = false;
-                    render();
-                    break;
                 case 'delete-account':
+                    if (!confirm('Bist du sicher? Dein Konto und alle Daten werden unwiderruflich gelöscht.')) break;
                     handleDeleteAccount();
                     break;
                 case 'test-mail': {
-                    btn.disabled = true;
-                    btn.textContent = 'Sende...';
-                    apiCall(`${API_BASE}/api/user/test-mail`, { method: 'POST' }).then(async r => {
-                        const json = await r.json();
-                        if (r.ok) {
-                            showToast('Test-Mail gesendet');
-                        } else {
-                            showToast(json.error || 'Fehler', 'error');
+                    if (btn.dataset.confirmVisible) break;
+                    btn.dataset.confirmVisible = '1';
+                    btn.style.display = 'none';
+                    const confirmWrap = document.createElement('div');
+                    confirmWrap.style.cssText = 'margin-top:4px;display:flex;flex-direction:column;gap:6px';
+                    const confirmHint = document.createElement('p');
+                    confirmHint.className = 'text-xs text-3';
+                    confirmHint.textContent = 'Tippe "SENDEN" zur Best\u00e4tigung:';
+                    const confirmInput = document.createElement('input');
+                    confirmInput.className = 'input';
+                    confirmInput.placeholder = 'SENDEN';
+                    confirmInput.autocomplete = 'off';
+                    const confirmBtnRow = document.createElement('div');
+                    confirmBtnRow.style.cssText = 'display:flex;gap:8px';
+                    const confirmBtn = document.createElement('button');
+                    confirmBtn.className = 'btn btn-primary';
+                    confirmBtn.textContent = 'Senden';
+                    confirmBtn.disabled = true;
+                    confirmBtn.style.flex = '1';
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.className = 'btn btn-secondary';
+                    cancelBtn.textContent = 'Abbrechen';
+                    cancelBtn.style.flex = '1';
+                    confirmBtnRow.appendChild(confirmBtn);
+                    confirmBtnRow.appendChild(cancelBtn);
+                    confirmWrap.appendChild(confirmHint);
+                    confirmWrap.appendChild(confirmInput);
+                    confirmWrap.appendChild(confirmBtnRow);
+                    btn.parentNode.insertBefore(confirmWrap, btn.nextSibling);
+                    confirmInput.focus();
+                    confirmInput.addEventListener('input', () => {
+                        confirmBtn.disabled = confirmInput.value.trim() !== 'SENDEN';
+                    });
+                    cancelBtn.addEventListener('click', () => {
+                        confirmWrap.remove();
+                        btn.style.display = '';
+                        delete btn.dataset.confirmVisible;
+                    });
+                    confirmBtn.addEventListener('click', async () => {
+                        confirmBtn.disabled = true;
+                        confirmBtn.textContent = 'Sende...';
+                        cancelBtn.disabled = true;
+                        try {
+                            const r = await apiCall(`${API_BASE}/api/user/test-mail`, { method: 'POST' });
+                            const json = await r.json();
+                            if (r.ok) {
+                                showToast('Test-Mail gesendet');
+                            } else {
+                                showToast(json.error || 'Fehler', 'error');
+                            }
+                        } catch (e) {
+                            showToast('Netzwerkfehler', 'error');
                         }
-                        btn.disabled = false;
-                        btn.textContent = 'Test-Mail senden';
-                    }).catch(() => {
-                        showToast('Netzwerkfehler', 'error');
-                        btn.disabled = false;
-                        btn.textContent = 'Test-Mail senden';
+                        confirmWrap.remove();
+                        btn.style.display = '';
+                        delete btn.dataset.confirmVisible;
                     });
                     break;
                 }
@@ -2267,7 +2296,6 @@
 
             // Password fields
             if (field === 'pw') { _pwLocal = e.target.value; return; }
-            if (field === 'pw2') { _pw2Local = e.target.value; return; }
 
             // Settings group fields
             if (field === 'group-name' && settingsState.editGroup) { settingsState.editGroup.name = e.target.value; return; }
@@ -2344,7 +2372,7 @@
                     formState.cancelled_at = new Date().toISOString().split('T')[0];
                 }
                 // Re-render on structural changes
-                if (['status', 'notify', 'notify_email_enabled', 'auto_renew', 'billing_interval', 'cost', 'start_date', 'duration_months', 'cancellation_period_months', 'cancellation_date_override'].includes(field)) {
+                if (['status', 'notify', 'notify_email_enabled', 'notify_days_before', 'auto_renew', 'billing_interval', 'cost', 'start_date', 'duration_months', 'cancellation_period_months', 'cancellation_date_override'].includes(field)) {
                     const modalEl = document.querySelector('.modal');
                     const scrollTop = modalEl ? modalEl.scrollTop : 0;
                     render();
@@ -2360,8 +2388,7 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 const field = e.target.dataset.field;
-                if (field === 'pw' && state.passwordMode === 'login') { submitPassword(); return; }
-                if (field === 'pw2') { submitPassword(); return; }
+                if (field === 'pw') { submitPassword(); return; }
                 if (e.target.id === 'new-user-input' || e.target.id === 'new-user-pw') {
                     const nameInput = document.getElementById('new-user-input');
                     const pwInput = document.getElementById('new-user-pw');
@@ -2378,15 +2405,13 @@
             if (_pwBusy) return;
             if (!_pwLocal) { showToast('Bitte Passwort eingeben', 'error'); return; }
             if (_pwLocal.length < 8) { showToast('Passwort: mindestens 8 Zeichen', 'error'); return; }
-            const needsConfirm = state.passwordMode === 'set-password' || state.passwordMode === 'register';
-            if (needsConfirm && _pwLocal !== _pw2Local) { showToast('Passw\u00f6rter stimmen nicht \u00fcberein', 'error'); return; }
             _pwBusy = true;
             render();
             if (state.passwordMode === 'login') await handleLogin(_pwLocal);
             else if (state.passwordMode === 'set-password') await handleSetPassword(_pwLocal);
             else await handleRegister(_pwLocal);
             _pwBusy = false;
-            _pwLocal = ''; _pw2Local = '';
+            _pwLocal = '';
         }
 
         async function handleImport() {
@@ -2429,15 +2454,14 @@
                 render();
             } catch (e) {
                 showToast(e.message || 'Fehler beim L\u00f6schen', 'error');
-                settingsState.confirmDelete = false;
                 settingsState.deleting = false;
                 render();
             }
         }
 
         // ============ ONLINE/OFFLINE ============
-        window.addEventListener('offline', () => { state.isOnline = false; render(); });
-        window.addEventListener('online', () => { state.isOnline = true; showToast('Wieder online'); render(); });
+        window.addEventListener('offline', () => { state.isOffline = true; render(); });
+        window.addEventListener('online', () => { state.isOffline = false; showToast('Wieder online'); render(); });
 
         // ============ INIT ============
         (async () => {

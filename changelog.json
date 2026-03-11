@@ -1,5 +1,16 @@
 [
     {
+        "version": "1.4.9",
+        "date": "2026-03-11",
+        "type": "patch",
+        "changes": [
+            "Einstellungen: Schliessen-Button als Secondary-Button (Design-Vereinheitlichung)",
+            "Test-Mail: Bestaetigungseingabe vor dem Versand erforderlich",
+            "E-Mail-Erinnerungen: Voraussichtliches Benachrichtigungsdatum im Formular",
+            "Formular: Autofokus-Bug behoben (Fokus nur beim erstmaligen Oeffnen)"
+        ]
+    },
+    {
         "version": "1.4.8",
         "date": "2026-03-11",
         "type": "patch",
