@@ -1492,10 +1492,14 @@ const stmtMarkNotified = db.prepare(
 
 async function checkExpiringContracts() {
     if (!SMTP_ENABLED) return;
+    console.log('📧 E-Mail-Prüfung gestartet');
     try {
         const contracts = stmtExpiringContracts.all();
-        if (contracts.length === 0) return;
-        debug(`📧 ${contracts.length} Verträge mit bevorstehender Kündigungsfrist gefunden`);
+        if (contracts.length === 0) {
+            console.log('📧 Keine fälligen Verträge gefunden');
+            return;
+        }
+        console.log(`📧 ${contracts.length} Vertrag/Verträge mit bevorstehender Kündigungsfrist gefunden`);
         for (const c of contracts) {
             const daysLeft = Math.ceil((new Date(c.cancellation_date) - new Date()) / (1000 * 60 * 60 * 24));
             const subject = 'Vertragsmanagement — Erinnerung';
@@ -1514,6 +1518,9 @@ async function checkExpiringContracts() {
             const sent = await sendNotificationMail(c.notify_email, subject, text);
             if (sent) {
                 stmtMarkNotified.run(c.id);
+                console.log(`📧 Mail gesendet an ${c.notify_email} für Vertrag "${c.name}" (${daysLeft} Tage verbleibend)`);
+            } else {
+                console.error(`📧 Mail-Versand fehlgeschlagen an ${c.notify_email} für Vertrag "${c.name}"`);
             }
         }
     } catch (err) {
