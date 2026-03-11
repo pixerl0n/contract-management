@@ -645,6 +645,7 @@
         const API_BASE = window.location.origin;
         const NODE_ENV = '%%NODE_ENV%%';
         const AUTH_MODE = '%%AUTH_MODE%%';
+        const SMTP_ENABLED = %%SMTP_ENABLED%%;
 
         const app = document.getElementById('app');
 
@@ -1478,7 +1479,7 @@
                     <div class="divider"></div>
                     <h3 class="fw-7" style="font-size:17px;margin-bottom:16px;color:var(--danger)">Konto löschen</h3>
                     <div class="gap-3">${accountSection}</div>
-                    <p class="text-xs text-3" style="text-align:center;margin-top:16px">Auth: ${escapeHtml(AUTH_MODE)}</p>
+                    <p class="text-xs text-3" style="text-align:center;margin-top:16px">Auth: ${escapeHtml(AUTH_MODE)} · E-Mail: ${SMTP_ENABLED ? 'aktiv' : 'deaktiviert'}</p>
                     <div style="margin-top:16px">
                         <button class="btn btn-ghost btn-full" data-action="close-modal">Schlie\u00dfen</button>
                     </div>

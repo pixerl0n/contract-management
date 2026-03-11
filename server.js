@@ -748,6 +748,7 @@ app.get('/', (_req, res) => {
         let html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
         html = html.replace('%%NODE_ENV%%', escapeForJS(NODE_ENV));
         html = html.replace('%%AUTH_MODE%%', USE_AUTH_SERVICE ? 'SSO' : 'Standalone');
+        html = html.replace('%%SMTP_ENABLED%%', SMTP_ENABLED ? 'true' : 'false');
         res.type('html').send(html);
     } catch (error) {
         console.error('index.html Fehler:', error);

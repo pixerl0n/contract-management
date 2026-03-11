@@ -1,5 +1,13 @@
 [
     {
+        "version": "1.4.8",
+        "date": "2026-03-11",
+        "type": "patch",
+        "changes": [
+            "Einstellungen: E-Mail-Status (aktiv/deaktiviert) sichtbar im Settings-Modal"
+        ]
+    },
+    {
         "version": "1.4.7",
         "date": "2026-03-10",
         "type": "minor",
