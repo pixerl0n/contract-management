@@ -674,6 +674,7 @@
             showCategoryStats: localStorage.getItem('contracts_showCategoryStats') !== 'false',
             showGroupStats: localStorage.getItem('contracts_showGroupStats') !== 'false',
             hideExpiredCancelled: localStorage.getItem('contracts_hideExpiredCancelled') !== 'false',
+            userEmail: '',
             showExpiredSection: false,
             isOnline: navigator.onLine,
             version: '',
@@ -961,6 +962,16 @@
             }
         }
 
+        async function loadUserEmail() {
+            try {
+                const res = await apiCall(`${API_BASE}/api/user/email`);
+                if (res.ok) {
+                    const data = await res.json();
+                    state.userEmail = data.email || '';
+                }
+            } catch (e) {}
+        }
+
         async function loadGroups() {
             try {
                 const res = await apiCall(`${API_BASE}/api/groups`);
@@ -1017,7 +1028,7 @@
                     state.view = 'dashboard';
                     state.passwordMode = null;
                     render();
-                    loadContracts(); loadGroups();
+                    loadContracts(); loadGroups(); loadUserEmail();
                 } else if (data.needsPassword) {
                     state.passwordMode = 'set-password';
                     render();
@@ -1042,7 +1053,7 @@
                     state.view = 'dashboard';
                     state.passwordMode = null;
                     render();
-                    loadContracts(); loadGroups();
+                    loadContracts(); loadGroups(); loadUserEmail();
                 }
             } catch (e) {
                 showToast('Netzwerkfehler', 'error');
@@ -1062,7 +1073,7 @@
                     state.view = 'dashboard';
                     state.passwordMode = null;
                     render();
-                    loadContracts(); loadGroups();
+                    loadContracts(); loadGroups(); loadUserEmail();
                 }
             } catch (e) {
                 showToast(e.message || 'Fehler beim Erstellen', 'error');
@@ -1170,7 +1181,7 @@
                         cancelled_at: c.cancelled_at || '', cancellation_confirmed: !!c.cancellation_confirmed,
                         customer_number: c.customer_number || '', contract_number: c.contract_number || '',
                         cancellation_date_override: c.cancellation_date_override || '',
-                        notify_email: c.notify_email || '',
+                        notify_email: c.notify_email || state.userEmail || '',
                         notify_email_enabled: !!c.notify_email_enabled,
                         notify_days_before: c.notify_days_before || 30,
                         notify_sent_at: c.notify_sent_at || ''
@@ -1184,7 +1195,7 @@
                         description: '', auto_renew: true, notes: '', status: 'active',
                         cancelled_at: '', cancellation_confirmed: false, customer_number: '',
                         contract_number: '', cancellation_date_override: '',
-                        notify_email: '', notify_email_enabled: false, notify_days_before: 30,
+                        notify_email: state.userEmail || '', notify_email_enabled: false, notify_days_before: 30,
                         notify_sent_at: ''
                     };
                 }
@@ -1475,6 +1486,14 @@
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
+                    </div>
+                    <div class="divider"></div>
+                    <h3 class="fw-7" style="font-size:17px;margin-bottom:16px">E-Mail-Adresse</h3>
+                    <div class="gap-3">
+                        <p class="text-xs text-3">Wird als Standard f\u00fcr E-Mail-Benachrichtigungen verwendet.</p>
+                        <input class="input" type="email" id="m-user-email" placeholder="name@beispiel.de" maxlength="200" value="${escapeHtml(state.userEmail || '')}">
+                        <button class="btn btn-primary btn-full" data-action="save-user-email">Speichern</button>
+                        <button class="btn btn-full" data-action="test-mail" style="margin-top:4px" ${SMTP_ENABLED ? '' : 'disabled title="SMTP nicht konfiguriert"'}>Test-Mail senden</button>
                     </div>
                     <div class="divider"></div>
                     <h3 class="fw-7" style="font-size:17px;margin-bottom:16px;color:var(--danger)">Konto löschen</h3>
@@ -2175,6 +2194,51 @@
                 case 'delete-account':
                     handleDeleteAccount();
                     break;
+                case 'test-mail': {
+                    btn.disabled = true;
+                    btn.textContent = 'Sende...';
+                    apiCall(`${API_BASE}/api/user/test-mail`, { method: 'POST' }).then(async r => {
+                        const json = await r.json();
+                        if (r.ok) {
+                            showToast('Test-Mail gesendet');
+                        } else {
+                            showToast(json.error || 'Fehler', 'error');
+                        }
+                        btn.disabled = false;
+                        btn.textContent = 'Test-Mail senden';
+                    }).catch(() => {
+                        showToast('Netzwerkfehler', 'error');
+                        btn.disabled = false;
+                        btn.textContent = 'Test-Mail senden';
+                    });
+                    break;
+                }
+                case 'save-user-email': {
+                    const emailInput = document.getElementById('m-user-email');
+                    const email = emailInput ? emailInput.value.trim() : '';
+                    btn.disabled = true;
+                    btn.textContent = 'Speichern...';
+                    apiCall(`${API_BASE}/api/user/email`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email }),
+                    }).then(async r => {
+                        if (r.ok) {
+                            state.userEmail = email;
+                            showToast('E-Mail gespeichert');
+                        } else {
+                            const json = await r.json();
+                            showToast(json.error || 'Fehler', 'error');
+                        }
+                        btn.disabled = false;
+                        btn.textContent = 'Speichern';
+                    }).catch(() => {
+                        showToast('Netzwerkfehler', 'error');
+                        btn.disabled = false;
+                        btn.textContent = 'Speichern';
+                    });
+                    break;
+                }
             }
         });
 
@@ -2388,6 +2452,7 @@
                     render();
                     loadContracts();
                     loadGroups();
+                    loadUserEmail();
                     return;
                 }
             } catch (_) {}

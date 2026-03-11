@@ -644,6 +644,9 @@ if (!cols.includes('notify_days_before')) {
     db.exec("ALTER TABLE contracts ADD COLUMN notify_days_before INTEGER DEFAULT 30");
 }
 
+// Migration: User-E-Mail
+try { db.exec("ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''"); } catch {}
+
 // ============================================================================
 // PREPARED STATEMENTS
 // ============================================================================
@@ -1066,6 +1069,59 @@ app.delete('/api/groups/:id', validateOrigin, validateSession, (req, res) => {
     } catch (error) {
         console.error('Delete group error:', error.message);
         res.status(500).json({ error: 'Fehler beim Löschen der Gruppe' });
+    }
+});
+
+// ============================================================================
+// USER EMAIL ENDPOINT
+// ============================================================================
+
+app.get('/api/user/email', validateOrigin, validateSession, (req, res) => {
+    try {
+        const row = db.prepare('SELECT email FROM users WHERE id = ?').get(req.sessionUserId);
+        res.json({ email: row?.email || '' });
+    } catch (err) {
+        console.error('Get user email:', err.message);
+        res.status(500).json({ error: 'Fehler beim Laden' });
+    }
+});
+
+app.put('/api/user/email', validateOrigin, validateSession, (req, res) => {
+    try {
+        const { email } = req.body;
+        if (email && String(email).length > 200) return res.status(400).json({ error: 'E-Mail zu lang (max. 200)' });
+        db.prepare('UPDATE users SET email = ? WHERE id = ?').run(String(email || '').trim(), req.sessionUserId);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Update user email:', err.message);
+        res.status(500).json({ error: 'Fehler beim Speichern' });
+    }
+});
+
+app.post('/api/user/test-mail', validateOrigin, validateSession, async (req, res) => {
+    if (!SMTP_ENABLED) return res.status(400).json({ error: 'E-Mail-Versand ist nicht konfiguriert' });
+    try {
+        const row = db.prepare('SELECT email FROM users WHERE id = ?').get(req.sessionUserId);
+        const email = row?.email;
+        if (!email) return res.status(400).json({ error: 'Keine E-Mail-Adresse hinterlegt' });
+        const sent = await sendNotificationMail(email, 'Vertragsmanagement \u2014 Test-Mail', [
+            'Hallo,',
+            '',
+            'dies ist eine Test-Mail deines Vertragsmanagements.',
+            'Der E-Mail-Versand funktioniert einwandfrei!',
+            '',
+            'Viele Gr\u00fc\u00dfe,',
+            'Dein Vertragsmanagement',
+        ].join('\n'));
+        if (sent) {
+            console.log(`\u{1F4E7} Test-Mail gesendet an ${email}`);
+            res.json({ success: true });
+        } else {
+            res.status(500).json({ error: 'Mail konnte nicht gesendet werden' });
+        }
+    } catch (err) {
+        console.error('Test-Mail Fehler:', err.message);
+        res.status(500).json({ error: 'Fehler beim Senden' });
     }
 });
 
