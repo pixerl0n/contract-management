@@ -1195,7 +1195,9 @@ app.post('/api/contracts', validateOrigin, validateSession, (req, res) => {
             notifyDaysBeforeVal
         );
 
-        res.json({ success: true, id: Number(result.lastInsertRowid) });
+        const newId = Number(result.lastInsertRowid);
+        res.json({ success: true, id: newId });
+        if (notifyEmailEnabledVal) checkContractNotification(newId);
     } catch (error) {
         console.error('Create contract error:', error.message);
         res.status(500).json({ error: 'Fehler beim Erstellen' });
@@ -1275,6 +1277,7 @@ app.put('/api/contracts/:id', validateOrigin, validateSession, (req, res) => {
         );
 
         res.json({ success: true, changes: result.changes });
+        if (notifyEmailEnabledVal) checkContractNotification(Number(req.params.id));
     } catch (error) {
         console.error('Update contract error:', error.message);
         res.status(500).json({ error: 'Fehler beim Aktualisieren' });
@@ -1486,9 +1489,52 @@ const stmtExpiringContracts = db.prepare(`
       AND c.notify_sent_at IS NULL
 `);
 
+const stmtExpiringContractById = db.prepare(`
+    SELECT c.*, u.name AS user_name
+    FROM contracts c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.id = ?
+      AND c.notify_email_enabled = 1
+      AND c.notify_email != ''
+      AND c.status = 'active'
+      AND c.cancellation_date IS NOT NULL
+      AND c.cancellation_date >= date('now')
+      AND c.cancellation_date <= date('now', '+' || c.notify_days_before || ' days')
+      AND c.notify_sent_at IS NULL
+`);
+
 const stmtMarkNotified = db.prepare(
     'UPDATE contracts SET notify_sent_at = CURRENT_TIMESTAMP WHERE id = ?'
 );
+
+async function checkContractNotification(contractId) {
+    if (!SMTP_ENABLED) return;
+    try {
+        const c = stmtExpiringContractById.get(contractId);
+        if (!c) return;
+        const daysLeft = Math.ceil((new Date(c.cancellation_date) - new Date()) / (1000 * 60 * 60 * 24));
+        const subject = 'Vertragsmanagement — Erinnerung';
+        const text = [
+            'Hallo,',
+            '',
+            daysLeft <= 0
+                ? 'bei einem deiner Verträge läuft die Kündigungsfrist heute ab.'
+                : `bei einem deiner Verträge läuft die Kündigungsfrist in ${daysLeft} Tag${daysLeft !== 1 ? 'en' : ''} ab.`,
+            '',
+            'Bitte prüfe deine Verträge in der App.',
+            '',
+            'Viele Grüße,',
+            'Dein Vertragsmanagement',
+        ].join('\n');
+        const sent = await sendNotificationMail(c.notify_email, subject, text);
+        if (sent) {
+            stmtMarkNotified.run(c.id);
+            console.log(`📧 Sofort-Mail gesendet an ${c.notify_email} für Vertrag "${c.name}" (${daysLeft} Tage verbleibend)`);
+        }
+    } catch (err) {
+        console.error('📧 Sofort-Notification Fehler:', err.message);
+    }
+}
 
 async function checkExpiringContracts() {
     if (!SMTP_ENABLED) return;
