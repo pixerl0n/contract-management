@@ -282,6 +282,13 @@ app.use((_req, res, next) => {
 // Serve static files BUT NOT index.html (that's served dynamically with injected config)
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
+app.use((req, res, next) => {
+    if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+        return writeLimiter(req, res, next);
+    }
+    next();
+});
+
 // Origin/Referer validation middleware (blocks bare curl POST/PUT/DELETE)
 function validateOrigin(req, res, next) {
     if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
@@ -385,6 +392,8 @@ function rateLimit(maxAttempts = 10, windowMs = 15 * 60 * 1000) {
 const localAuthLimiter = USE_AUTH_SERVICE
     ? (_req, _res, next) => next()
     : rateLimit();
+
+const writeLimiter = rateLimit(60, 60 * 1000);
 
 // Cleanup expired rate limit entries every 15 minutes
 setInterval(() => {
