@@ -6,6 +6,10 @@
     <title>Vertragsmanagement</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Verträge">
+    <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+    <link rel="manifest" href="/manifest.json">
     <link rel="icon" id="favicon" href="data:,">
     <style>
 @font-face {
@@ -23,9 +27,12 @@
     src: url('fonts/dm-sans-latin-italic.woff2') format('woff2');
 }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
-        body { overscroll-behavior: none; }
-        input, select, textarea { font-size: 16px !important; }
+        html { touch-action: manipulation; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+        body { overscroll-behavior: none; -webkit-user-select: none; user-select: none; position: fixed; width: 100%; height: 100%; overflow: hidden; }
+        #app { overflow-y: auto; -webkit-overflow-scrolling: touch; height: 100%; }
+        p, span.text-2 { -webkit-user-select: text; user-select: text; }
+        input, select, textarea { font-size: 16px !important; -webkit-user-select: text; user-select: text; }
+        a, button, .btn { -webkit-touch-callout: none; }
 
         :root {
             --bg:            #f5f5f7;
@@ -103,7 +110,7 @@
 
         /* -- Layout -- */
         .max-w { max-width: 960px; margin: 0 auto; padding: 0 16px; }
-        .page  { min-height: 100dvh; padding: 16px 0 32px; }
+        .page  { min-height: 100dvh; padding: 16px 0 calc(32px + env(safe-area-inset-bottom)); }
 
         /* -- Cards -- */
         .card {
@@ -161,7 +168,7 @@
 
         /* -- Nav -- */
         /* ── Nav Bar (identisch in allen Apps, nur max-width unterscheidet sich) ── */
-        .nav { position: sticky; top: 0; z-index: 50; background: var(--nav-bg); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--border); padding: 12px 16px; }
+        .nav { position: sticky; top: 0; z-index: 50; background: var(--nav-bg); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--border); padding: calc(12px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left)); }
         .nav-inner { max-width: 960px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 44px; }
         .nav-left { display: flex; align-items: center; gap: 10px; }
         .nav-meta { display: flex; align-items: center; gap: 6px; }
@@ -180,7 +187,7 @@
         }
 
         /* -- Toast -- */
-        .toast-container { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 300; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+        .toast-container { position: fixed; bottom: calc(28px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 300; display: flex; flex-direction: column; gap: 8px; align-items: center; }
         .toast {
             padding: 11px 20px; border-radius: 100px; font-size: 14px; font-weight: 500;
             box-shadow: var(--shadow-lg); white-space: nowrap;
@@ -232,7 +239,7 @@
         .type-patch { background: rgba(52,199,89,0.1); color: var(--success); }
 
         /* -- Offline banner -- */
-        .offline-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 200; background: var(--warning); color: #000; text-align: center; padding: 6px 12px; font-size: 13px; font-weight: 600; }
+        .offline-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 200; background: var(--warning); color: #000; text-align: center; padding: calc(6px + env(safe-area-inset-top)) 12px 6px; font-size: 13px; font-weight: 600; }
 
         /* -- Divider -- */
         .divider { height: 1px; background: var(--border); margin: 16px 0; }
@@ -2059,6 +2066,8 @@
 
         // ============ MAIN RENDER ============
         function render() {
+            const appEl = document.getElementById('app');
+            if (appEl) appEl.scrollTop = 0;
             let html = '';
             if (state.view === 'loading') html = renderLoading();
             else if (state.view === 'login') html = renderLogin();

@@ -1,6 +1,6 @@
 {
   "name": "contract-management",
-  "version": "1.4.10",
+  "version": "1.4.10b",
   "description": "Persönliches Vertragsmanagement",
   "main": "server.js",
   "scripts": {
