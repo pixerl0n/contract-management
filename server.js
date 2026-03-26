@@ -397,11 +397,13 @@ const writeLimiter = rateLimit(60, 60 * 1000);
 
 // Cleanup expired rate limit entries every 15 minutes
 setInterval(() => {
-    const now = Date.now();
-    const windowMs = 15 * 60 * 1000;
-    for (const [ip, entry] of rateLimitMap) {
-        if ((now - entry.firstAttempt) > windowMs) rateLimitMap.delete(ip);
-    }
+    try {
+        const now = Date.now();
+        const windowMs = 15 * 60 * 1000;
+        for (const [ip, entry] of rateLimitMap) {
+            if ((now - entry.firstAttempt) > windowMs) rateLimitMap.delete(ip);
+        }
+    } catch (e) { console.error('Rate limit cleanup error:', e); }
 }, 15 * 60 * 1000).unref();
 
 // ============================================================================
@@ -1641,8 +1643,8 @@ async function checkExpiringContracts() {
 
 // Prüfung alle 6 Stunden (und einmal 30s nach Start)
 if (SMTP_ENABLED) {
-    setTimeout(checkExpiringContracts, 30 * 1000);
-    setInterval(checkExpiringContracts, 6 * 60 * 60 * 1000).unref();
+    setTimeout(() => { try { checkExpiringContracts(); } catch (e) { console.error('Contract check error:', e); } }, 30 * 1000);
+    setInterval(() => { try { checkExpiringContracts(); } catch (e) { console.error('Contract check error:', e); } }, 6 * 60 * 60 * 1000).unref();
 }
 
 // ============================================================================
