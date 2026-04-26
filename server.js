@@ -157,8 +157,18 @@ async function sendNotificationMail(to, subject, text) {
     }
 }
 
+// Redact sensitive fields before logging
+function redactBody(body) {
+    if (!body || typeof body !== 'object') return body;
+    const redacted = { ...body };
+    for (const k of ['password', 'newPassword', 'oldPassword', 'currentPassword']) {
+        if (k in redacted) redacted[k] = '***';
+    }
+    return redacted;
+}
+
 async function authFetch(endpoint, body, token) {
-    debug(`authFetch POST ${endpoint}`, JSON.stringify(body), token ? 'mit Token' : 'ohne Token');
+    debug(`authFetch POST ${endpoint}`, JSON.stringify(redactBody(body)), token ? 'mit Token' : 'ohne Token');
     try {
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = 'Bearer ' + token;
@@ -196,7 +206,7 @@ async function authGet(endpoint, token) {
 }
 
 async function authDelete(endpoint, body, token) {
-    debug(`authDelete DELETE ${endpoint}`, body ? JSON.stringify(body) : '', token ? 'mit Token' : 'ohne Token');
+    debug(`authDelete DELETE ${endpoint}`, body ? JSON.stringify(redactBody(body)) : '', token ? 'mit Token' : 'ohne Token');
     try {
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = 'Bearer ' + token;
@@ -359,19 +369,30 @@ async function validateSession(req, res, next) {
 // RATE LIMITING (in-memory, per IP)
 // ============================================================================
 
-const rateLimitMap = new Map();
-
+// Per-limiter map + cleanup interval — separate maps prevent counter pollution
+// between auth and write limiters.
 function rateLimit(maxAttempts = 10, windowMs = 15 * 60 * 1000) {
+    const map = new Map();
+
+    setInterval(() => {
+        try {
+            const now = Date.now();
+            for (const [ip, entry] of map) {
+                if ((now - entry.firstAttempt) > windowMs) map.delete(ip);
+            }
+        } catch (e) { console.error('Rate limit cleanup error:', e); }
+    }, windowMs).unref();
+
     return (req, res, next) => {
         const ip = req.ip || req.socket.remoteAddress;
         const now = Date.now();
-        const entry = rateLimitMap.get(ip);
+        const entry = map.get(ip);
 
         if (entry && (now - entry.firstAttempt) > windowMs) {
-            rateLimitMap.delete(ip);
+            map.delete(ip);
         }
 
-        const current = rateLimitMap.get(ip);
+        const current = map.get(ip);
         if (current && current.count >= maxAttempts) {
             const retryAfter = Math.ceil((current.firstAttempt + windowMs - now) / 1000);
             res.setHeader('Retry-After', retryAfter);
@@ -381,10 +402,10 @@ function rateLimit(maxAttempts = 10, windowMs = 15 * 60 * 1000) {
         if (current) {
             current.count++;
         } else {
-            rateLimitMap.set(ip, { count: 1, firstAttempt: now });
+            map.set(ip, { count: 1, firstAttempt: now });
         }
 
-        req.rateLimitReset = () => rateLimitMap.delete(ip);
+        req.rateLimitReset = () => map.delete(ip);
         next();
     };
 }
@@ -394,17 +415,6 @@ const localAuthLimiter = USE_AUTH_SERVICE
     : rateLimit();
 
 const writeLimiter = rateLimit(60, 60 * 1000);
-
-// Cleanup expired rate limit entries every 15 minutes
-setInterval(() => {
-    try {
-        const now = Date.now();
-        const windowMs = 15 * 60 * 1000;
-        for (const [ip, entry] of rateLimitMap) {
-            if ((now - entry.firstAttempt) > windowMs) rateLimitMap.delete(ip);
-        }
-    } catch (e) { console.error('Rate limit cleanup error:', e); }
-}, 15 * 60 * 1000).unref();
 
 // ============================================================================
 // VALIDATION

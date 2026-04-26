@@ -1,5 +1,16 @@
 [
     {
+        "version": "1.4.12",
+        "date": "2026-04-26",
+        "type": "patch",
+        "changes": [
+            "Sicherheit: Rate-Limiter-Bug behoben (Schreib-Aktivitaet blockierte zuvor faelschlich Login-Versuche)",
+            "Sicherheit: Klartext-Passwoerter werden bei LOG_LEVEL=debug nicht mehr in stdout geschrieben",
+            "UX: Account-Loeschen via geteiltes inlineConfirm-Pattern",
+            "Doku: CLAUDE.md korrigiert (Passwort-Mindestlaenge 8, Test-Anzahl)"
+        ]
+    },
+    {
         "version": "1.4.11",
         "date": "2026-03-26",
         "type": "patch",

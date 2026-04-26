@@ -18,3 +18,21 @@ tests/
 *.junit.xml
 test-results/
 coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+Thumbs.db
+
+# Editor backups (sed, vim, etc.)
+*.bak
+*.tmp
+*.orig

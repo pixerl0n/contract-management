@@ -779,6 +779,43 @@
             el.innerHTML = toasts.map(t => `<div class="toast toast-${escapeHtml(t.type)}">${escapeHtml(t.message)}</div>`).join('');
         }
 
+        // Shared sister-app pattern: inline confirmation overlay.
+        function inlineConfirm(targetEl, opts) {
+            if (!targetEl) return;
+            opts = opts || {};
+            const savedNodes = Array.from(targetEl.childNodes);
+            const card = document.createElement('div');
+            card.className = 'card card-body';
+            card.style.cssText = 'border:1px solid var(--danger);padding:12px;display:flex;flex-direction:column;gap:8px';
+            const msgEl = document.createElement('p');
+            msgEl.className = 'fw-6 text-sm';
+            msgEl.style.color = 'var(--danger)';
+            msgEl.textContent = opts.message || 'Wirklich löschen?';
+            card.appendChild(msgEl);
+            if (opts.detail) {
+                const detailEl = document.createElement('p');
+                detailEl.className = 'text-xs text-2';
+                detailEl.textContent = opts.detail;
+                card.appendChild(detailEl);
+            }
+            const btnRow = document.createElement('div');
+            btnRow.style.cssText = 'display:flex;gap:8px';
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'btn btn-secondary btn-sm';
+            cancelBtn.style.flex = '1';
+            cancelBtn.textContent = opts.cancelLabel || 'Abbrechen';
+            cancelBtn.addEventListener('click', () => targetEl.replaceChildren(...savedNodes));
+            const okBtn = document.createElement('button');
+            okBtn.className = 'btn btn-danger btn-sm';
+            okBtn.style.flex = '1';
+            okBtn.textContent = opts.confirmLabel || 'Endgültig löschen';
+            okBtn.addEventListener('click', () => { if (opts.onConfirm) opts.onConfirm(); });
+            btnRow.appendChild(cancelBtn);
+            btnRow.appendChild(okBtn);
+            card.appendChild(btnRow);
+            targetEl.replaceChildren(card);
+        }
+
         // ============ ICONS ============
         function iconSun() { return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="4.22" y1="4.22" x2="5.99" y2="5.99"/><line x1="18.01" y1="18.01" x2="19.78" y2="19.78"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.22" y1="19.78" x2="5.99" y2="18.01"/><line x1="18.01" y1="5.99" x2="19.78" y2="4.22"/></svg>'; }
         function iconMoon() { return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'; }
@@ -2194,36 +2231,15 @@
                     render();
                     break;
                 case 'delete-account': {
-                    if (btn.dataset.confirmVisible) break;
-                    btn.dataset.confirmVisible = '1';
-                    btn.style.display = 'none';
-                    const delWrap = document.createElement('div');
-                    delWrap.style.cssText = 'margin-top:4px;display:flex;flex-direction:column;gap:6px';
-                    const delHint = document.createElement('p');
-                    delHint.className = 'text-xs text-3';
-                    delHint.textContent = 'Konto wirklich löschen? Das kann nicht rückgängig gemacht werden!';
-                    const delBtnRow = document.createElement('div');
-                    delBtnRow.style.cssText = 'display:flex;gap:8px';
-                    const delCancelBtn = document.createElement('button');
-                    delCancelBtn.className = 'btn btn-secondary';
-                    delCancelBtn.textContent = 'Abbrechen';
-                    delCancelBtn.style.flex = '1';
-                    const delConfirmBtn = document.createElement('button');
-                    delConfirmBtn.className = 'btn btn-danger';
-                    delConfirmBtn.textContent = 'Löschen';
-                    delConfirmBtn.style.flex = '1';
-                    delBtnRow.appendChild(delCancelBtn);
-                    delBtnRow.appendChild(delConfirmBtn);
-                    delWrap.appendChild(delHint);
-                    delWrap.appendChild(delBtnRow);
-                    btn.parentNode.insertBefore(delWrap, btn.nextSibling);
-                    delCancelBtn.addEventListener('click', () => {
-                        delWrap.remove();
-                        btn.style.display = '';
-                        delete btn.dataset.confirmVisible;
-                    });
-                    delConfirmBtn.addEventListener('click', () => {
-                        handleDeleteAccount();
+                    // Wrap btn so inlineConfirm can replace+restore content cleanly
+                    const wrap = document.createElement('div');
+                    btn.parentNode.insertBefore(wrap, btn);
+                    wrap.appendChild(btn);
+                    inlineConfirm(wrap, {
+                        message: 'Konto wirklich löschen?',
+                        detail: 'Das kann nicht rückgängig gemacht werden.',
+                        confirmLabel: 'Löschen',
+                        onConfirm: handleDeleteAccount,
                     });
                     break;
                 }
